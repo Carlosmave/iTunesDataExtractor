@@ -2,8 +2,54 @@ import requests, json
 from bs4 import BeautifulSoup
 from selenium import webdriver
 
-urls=["https://itunes.apple.com/us/movie/devil/id396826065", "https://itunes.apple.com/us/movie/dinosaur/id296353403"]
-for url in urls:
+urls=[]
+imgurls=[]
+
+
+input_var = input("Enter something: ")
+#print ("you entered " + input_var)
+#input_var = input_var.strip()
+#input_var = input_var.replace(" ", "+")
+#movies_url = 'https://itunes.apple.com/search?term=harry+potter&limit=25'
+#movies_url = 'https://itunes.apple.com/search?term=harry+potter&entity=movie'
+movies_url = 'https://itunes.apple.com/search?term=' + input_var + '&country=us&entity=movie'
+response = requests.get(movies_url)
+response.raise_for_status()
+data10 = response.json()
+
+contador=1
+resultados=[]
+for i in data10["results"]:
+    print(str(contador)+ ": " + i["trackName"])
+    contador+=1
+    resultados.append(i)
+
+input_var2 = input("Choose number: ")
+print(resultados[int(input_var2)-1]["trackName"])
+urls.append(resultados[int(input_var2)-1]["trackViewUrl"])
+imgurl=(resultados[int(input_var2)-1]["artworkUrl100"]).replace("100x100bb", "100000x100000-999")
+imgurls.append(imgurl)
+    #print (i)
+    #for key, value in i.items():
+    #    print(str(key) + ": " + str(value))
+##    print(i["trackId"])
+##    print(i["artistName"])
+##    print(i["trackName"])
+##    print(i["trackViewUrl"])
+##    print(i["artworkUrl100"])
+##    print(i["releaseDate"])
+##    print(i["country"])
+##    print(i["primaryGenreName"])
+##    print(i["contentAdvisoryRating"])
+##    print(i["longDescription"])
+    #print("------------------------------------------------------------------------")
+#print(movies_url)
+
+
+
+
+
+for url, imgurl in zip(urls, imgurls):
     #result=requests.get(url)
     #src = result.content
     #soup = BeautifulSoup(src, 'lxml')
@@ -11,7 +57,7 @@ for url in urls:
     #Se puede ver que la sección information viene de un JavaScript yendo a la sección "Sources" en el buscador, por eso no se puede obtener mediante requests. Para que se ejecute el JavaScript
     #y aparezca la información completa de forma scrapeable, se debe abrir el link en un buscador. Para eso se utilizó Selenium.
     
-    browser = webdriver.Firefox(executable_path = r'C:/Users/carlo/Documents/Programming-Projects/Python Scripts/iTunesExtractor/geckodriver.exe')
+    browser = webdriver.Firefox(executable_path = r'C:/Users/carlo/Documents/Programming-Projects/Python Scripts/iTunesMediaExtractor/geckodriver.exe')
     browser.get(url)
     html=browser.page_source
     
@@ -45,8 +91,14 @@ for url in urls:
         elif role == "screenwriter":
             screenwriters.append(person.find("a").text.strip())
 
-    studio = soup.find("dd", class_="information-list__item__definition")
-    cpright = soup.find("dd", class_="information-list__item__definition information-list__item__definition--copyright")
+    try:
+        studio = soup.find("dd", class_="information-list__item__definition").text.strip()
+    except AttributeError:
+        studio = ""
+    try:
+        cpright = soup.find("dd", class_="information-list__item__definition information-list__item__definition--copyright").text.strip()
+    except AttributeError:
+        cpright = ""
     
     print("Title: " + title.text)
     print("Release Date: " + releasedate["datetime"])
@@ -58,14 +110,27 @@ for url in urls:
     print("Producers: " + ', '.join(producers))
     print("Screenwriters: " + ', '.join(screenwriters))
 
-    print("Studio: " + studio.text.strip())
-    print("Copyright: " + cpright.text.strip())
+    print("Studio: " + studio)
+    print("Copyright: " + cpright)
 
     browser.close()
+    
+    
+    r = requests.get(imgurl)
+    print(url)
+    print(imgurl)
+    filename= title.text +  ".jpg"
 
-
-input_var = input("Enter something: ")
-print ("you entered " + input_var)
+    pcharacters=[':', '*', '?', '"', '<', '>', '|', ' ']#, '/', '\'
+    for pcharacter in pcharacters:
+        if pcharacter in filename:
+            filename = filename.replace(pcharacter,"")
+                                                                  
+    filename=filename.lower()
+    print(filename)
+    with open(filename, 'wb') as f:
+        f.write(r.content)
+    
     
     
 
