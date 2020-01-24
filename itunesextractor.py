@@ -6,13 +6,30 @@ urls=[]
 img_urls=[]
 search_terms=[]
 output=[]
+
 def search():
     search_term = input("Enter search term (type 0 when you're done): ")
-    if (search_term != "0"):
+    if (search_term != "0" and search_term != ""):
         search_terms.append(search_term)
+        search()
+    elif (search_term == ""):
+        print("Enter a valid search term")
         search()
     else:
         print(str(len(search_terms)) + " search terms added")
+
+def choose(search_results):
+    choice_number = input("Choose an item number: ")
+    try:
+        choice=search_results[int(choice_number)-1]
+        return choice
+    except IndexError:
+        print("The chosen number is not in the list")
+        return choose(search_results)
+    except ValueError:
+        print("Please insert a number")
+        return choose(search_results)
+        
         
 print("Welcome to the iTunesMediaExtractor")
 print("Made by Carlos Martinez")
@@ -30,20 +47,25 @@ for search_term in search_terms:
 
     counter=1
     search_results=[]
-    for item in response["results"]:
-        try:
-            print(str(counter)+ ": " + item["trackName"])
-            counter+=1
-            search_results.append(item)
-        except KeyError:
-            pass
-
-    choice_number = input("Choose an item number: ")
-    print("Item chosen: " + search_results[int(choice_number)-1]["trackName"])
-    url=search_results[int(choice_number)-1]["trackViewUrl"]
-    urls.append(url)
-    imgurl=(search_results[int(choice_number)-1]["artworkUrl100"]).replace("100x100bb", "100000x100000-999")
-    img_urls.append(imgurl)
+    if response["results"]:
+        for item in response["results"]:
+            try:
+                print(str(counter)+ ": " + item["trackName"])
+                counter+=1
+                search_results.append(item)
+            except KeyError:
+                pass
+        #sresults=len(search_results)
+        
+        #choice_number = input("Choose an item number: ")
+        choice=choose(search_results)
+        print("Item chosen: " + choice["trackName"])
+        url=choice["trackViewUrl"]
+        urls.append(url)
+        imgurl=(choice["artworkUrl100"]).replace("100x100bb", "100000x100000-999")
+        img_urls.append(imgurl)
+    else:
+        print("No results match the search term entered")
 
 
 
@@ -149,8 +171,6 @@ for url, img_url in zip(urls, img_urls):
     print("Image: " + img_url)
     print("Downloading image...")    
     r = requests.get(img_url)
-    #print(url)
-    #print(img_url)
     filename= title.text +  ".jpg"
 
     fcharacters=[':', '*', '?', '"', '<', '>', '|', ' ']#, '/', '\'
@@ -159,17 +179,15 @@ for url, img_url in zip(urls, img_urls):
             filename = filename.replace(fcharacter,"")
                                                                       
     filename=filename.lower()
-    #print(filename)
-    
     with open(filename, 'wb') as f:
         f.write(r.content)
     print("Download complete")
+    print("Image saved in: " + filename)
     
     
 with open('metadata.txt', 'w') as f:
     for line in output:
         f.write("%s\n" % line)
-
 print("Done")
 
 
