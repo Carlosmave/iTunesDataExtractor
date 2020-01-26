@@ -4,8 +4,10 @@ from selenium import webdriver
 
 urls=[]
 img_urls=[]
+short_descriptions=[]
 search_terms=[]
 output=[]
+apikey="e6fa56aa"
 
 def search():
     search_term = input("Enter search term (type 0 when you're done): ")
@@ -29,6 +31,43 @@ def choose(search_results):
     except ValueError:
         print("Please insert a number")
         return choose(search_results)
+
+
+def imdb_search(search_term):
+    imdb_url = 'http://www.omdbapi.com/?apikey=' + apikey + '&s=' + search_term + '&type=movie'
+    response = requests.get(imdb_url)
+    response.raise_for_status()
+    response = response.json()
+    if response["Response"]=="True":
+        i=1
+        counter=1
+        imdb_search_results=[]
+        while(i<5):
+            imdb_url = 'http://www.omdbapi.com/?apikey=' + apikey + '&s=' + search_term + '&type=movie&page=' + str(i)
+            response = requests.get(imdb_url)
+            response.raise_for_status()
+            response = response.json()
+            try:
+                for item in response["Search"]:
+                    print(str(counter)+ ": " + item["Title"] + " - " + item["Year"])
+                    counter+=1
+                    imdb_search_results.append(item)
+            except KeyError:
+                pass
+            i+=1
+        imdb_choice=choose(imdb_search_results)
+        print("Item chosen: " + imdb_choice["Title"]  + " - " + imdb_choice["Year"])
+        imdb_id=imdb_choice["imdbID"]
+        imdb_url = 'http://www.omdbapi.com/?apikey=' + apikey + '&i=' + imdb_id + '&type=movie'
+        response = requests.get(imdb_url)
+        response.raise_for_status()
+        response = response.json()
+        short_descriptions.append(response["Plot"])
+    else:
+        print("The iTunes movie name couldn't be found on IMDb, please enter the search term again")
+        search_term = input("Enter search term: ")
+        imdb_search(search_term)
+
         
         
 print("Welcome to the iTunesMediaExtractor")
@@ -39,7 +78,7 @@ search()
 
 for search_term in search_terms:
     print("---------------------------------------------------------------------------------------------------")
-    print("Search results for: " + search_term)
+    print("Search results on iTunes for: " + search_term)
     movie_url = 'https://itunes.apple.com/search?term=' + search_term + '&country=us&entity=movie'
     response = requests.get(movie_url)
     response.raise_for_status()
@@ -50,20 +89,26 @@ for search_term in search_terms:
     if response["results"]:
         for item in response["results"]:
             try:
-                print(str(counter)+ ": " + item["trackName"])
+                print(str(counter)+ ": " + item["trackName"] + " - " + item["releaseDate"][:4])
                 counter+=1
                 search_results.append(item)
             except KeyError:
                 pass
-        #sresults=len(search_results)
-        
-        #choice_number = input("Choose an item number: ")
+
         choice=choose(search_results)
-        print("Item chosen: " + choice["trackName"])
+        print("Item chosen: " + choice["trackName"]  + " - " + choice["releaseDate"][:4])
         url=choice["trackViewUrl"]
         urls.append(url)
         imgurl=(choice["artworkUrl100"]).replace("100x100bb", "100000x100000-999")
         img_urls.append(imgurl)
+
+        print("---------------------------------------------------------------------------------------------------")
+        print("Search results on IMDb for: " + search_term)
+        imdb_search(choice["trackName"])
+
+
+
+        
     else:
         print("No results match the search term entered")
 
@@ -72,7 +117,7 @@ for search_term in search_terms:
 
 
 
-for url, img_url in zip(urls, img_urls):
+for url, img_url, short_description in zip(urls, img_urls, short_descriptions):
     #result=requests.get(url)
     #src = result.content
     #soup = BeautifulSoup(src, 'lxml')
@@ -127,10 +172,11 @@ for url, img_url in zip(urls, img_urls):
 
 
     otitle="Title: " + title.text
-    ordate="Release Date: " + release_date["datetime"]
-    orating="Rating: " + rating["aria-label"]
+    ordate="Release Date: " + release_date["datetime"][:10]
+    orating="Rating: " + rating["aria-label"].replace(" ","-")
     ogenre="Genre: " + genre.text
-    odescr="Description: " + description.text.replace("’", "'").replace("“", '"').replace("”", '"')
+    osdescr="Short Description: " + short_description.replace("’", "'").replace("“", '"').replace("”", '"')
+    odescr="Long Description: " + description.text.replace("’", "'").replace("“", '"').replace("”", '"')
     ocast="Cast: " + ', '.join(cast)
     odirec="Directors: " + ', '.join(directors)
     oprod="Producers: " + ', '.join(producers)
@@ -143,6 +189,7 @@ for url, img_url in zip(urls, img_urls):
     output.append(ordate)
     output.append(orating)
     output.append(ogenre)
+    output.append(osdescr)
     output.append(odescr)
     output.append(ocast)
     output.append(odirec)
@@ -154,10 +201,11 @@ for url, img_url in zip(urls, img_urls):
 
         
     print("Title: " + title.text)
-    print("Release Date: " + release_date["datetime"])
-    print("Rating: " + rating["aria-label"])
+    print("Release Date: " + release_date["datetime"][:10])
+    print("Rating: " + rating["aria-label"].replace(" ","-"))
     print("Genre: " + genre.text)
-    print("Description: " + description.text.replace("’", "'").replace("“", '"').replace("”", '"'))
+    print("Short Description: " + short_description.replace("’", "'").replace("“", '"').replace("”", '"'))
+    print("Long Description: " + description.text.replace("’", "'").replace("“", '"').replace("”", '"'))
     print("Cast: " + ', '.join(cast))
     print("Directors: " + ', '.join(directors))
     print("Producers: " + ', '.join(producers))
