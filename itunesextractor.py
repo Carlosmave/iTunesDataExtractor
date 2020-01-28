@@ -1,4 +1,4 @@
-import requests, json
+import requests, json, sys
 from bs4 import BeautifulSoup
 from selenium import webdriver
 
@@ -14,7 +14,10 @@ def movie_mode():
     print("Choose source:")
     print("1: iTunes and IMDb")
     print("2: Just IMDb")
-    mode = input("Choose a source: ")
+    try:
+        mode = input("Choose a source: ")
+    except KeyboardInterrupt:
+        sys.exit()
     if (mode=="1"):
         print("Source chosen: iTunes and IMDb")
         return("1")
@@ -29,7 +32,10 @@ def media_mode():
     print("Choose media type:")
     print("1: Movie")
     print("2: TV Show")
-    media_type = input("Choose a media type: ")
+    try:
+        media_type = input("Choose a media type: ")
+    except KeyboardInterrupt:
+        sys.exit()
     if (media_type=="1"):
         print("Media type chosen: Movie")
         return movie_mode()
@@ -61,7 +67,10 @@ def media_mode():
         
 
 def choose(search_results):
-    choice_number = input("Choose an item number: ")
+    try:
+        choice_number = input("Choose an item number: ")
+    except KeyboardInterrupt:
+        sys.exit()
     try:
         choice=search_results[int(choice_number)-1]
         return choice
@@ -107,11 +116,16 @@ def imdb_search(search_term):
             print("---------------------------------------------------------------------------------------------------")
         else:
             print("The iTunes movie name couldn't be found on IMDb, please enter the search term again")
-            search_term = input("Enter search term: ")
+            try:
+                search_term = input("Enter search term: ")
+            except KeyboardInterrupt:
+                sys.exit()
             imdb_search(search_term)
     else:
-        print("WORKED")
-        search_term = input("Enter search term (type 0 when you're done): ")
+        try:
+            search_term = input("Enter search term (type 0 when you're done): ")
+        except KeyboardInterrupt:
+            sys.exit()
         if (search_term != "0" and search_term != ""):
             imdb_url = 'http://www.omdbapi.com/?apikey=' + apikey + '&s=' + search_term + '&type=movie'
             response = requests.get(imdb_url)
@@ -143,7 +157,6 @@ def imdb_search(search_term):
                 urls.append(imdb_url)              
             else:
                 print("No results match the search term entered")
-                imdb_search("sourceimdb")
             imdb_search("sourceimdb")
         elif (search_term == ""):
             print("Enter a valid search term")
@@ -153,7 +166,10 @@ def imdb_search(search_term):
 
 
 def itunes_search():
-    search_term = input("Enter search term (type 0 when you're done): ")
+    try:
+        search_term = input("Enter search term (type 0 when you're done): ")
+    except KeyboardInterrupt:
+        sys.exit()
     if (search_term != "0" and search_term != ""):
         movie_url = 'https://itunes.apple.com/search?term=' + search_term + '&country=us&entity=movie'
         response = requests.get(movie_url)
@@ -179,14 +195,13 @@ def itunes_search():
             urls.append(url)
             imgurl=(choice["artworkUrl100"]).replace("100x100bb", "100000x100000-999")
             img_urls.append(imgurl)
-
-            print("---------------------------------------------------------------------------------------------------")
-            print("Search results on IMDb for: " + search_term)
-            imdb_search(choice["trackName"])
             
+            if (mode=="1"):
+                print("---------------------------------------------------------------------------------------------------")
+                print("Search results on IMDb for: " + search_term)
+                imdb_search(choice["trackName"])
         else:
             print("No results match the search term entered")
-            itunes_search()
         itunes_search()
     elif (search_term == ""):
         print("Enter a valid search term")
@@ -204,45 +219,6 @@ mode=media_mode()
 
 if (mode=="1"):
     itunes_search()
-##    for search_term in search_terms:
-##        print("---------------------------------------------------------------------------------------------------")
-##        print("Search results on iTunes for: " + search_term)
-##        movie_url = 'https://itunes.apple.com/search?term=' + search_term + '&country=us&entity=movie'
-##        response = requests.get(movie_url)
-##        response.raise_for_status()
-##        response = response.json()
-##
-##        counter=1
-##        search_results=[]
-##        if response["results"]:
-##            for item in response["results"]:
-##                try:
-##                    print(str(counter)+ ": " + item["trackName"] + " - " + item["releaseDate"][:4])
-##                    counter+=1
-##                    search_results.append(item)
-##                except KeyError:
-##                    pass
-##
-##            choice=choose(search_results)
-##            print("Item chosen: " + choice["trackName"]  + " - " + choice["releaseDate"][:4])
-##            url=choice["trackViewUrl"]
-##            urls.append(url)
-##            imgurl=(choice["artworkUrl100"]).replace("100x100bb", "100000x100000-999")
-##            img_urls.append(imgurl)
-##
-##            print("---------------------------------------------------------------------------------------------------")
-##            print("Search results on IMDb for: " + search_term)
-##            imdb_search(choice["trackName"])
-##
-##
-##
-##            
-##        else:
-##            print("No results match the search term entered")
-
-
-
-
 
 
     for url, img_url, short_description in zip(urls, img_urls, short_descriptions):
@@ -319,9 +295,9 @@ if (mode=="1"):
         output.append(ogenre)
         output.append(osdescr)
         output.append(odescr)
-        output.append(ocast)
         output.append(odirec)
         output.append(oprod)
+        output.append(ocast)
         output.append(oscreen)
         output.append(ostudio)
         output.append(ocpright)
@@ -333,10 +309,10 @@ if (mode=="1"):
         print(orating)
         print(ogenre)
         print(osdescr)
-        print(odescr)
-        print(ocast)
+        print(odescr) 
         print(odirec)
         print(oprod)
+        print(ocast)
         print(oscreen)
         print(ostudio)
         print(ocpright)
@@ -366,17 +342,13 @@ if (mode=="1"):
             f.write("%s\n" % line)
     print("Done")
 
+
 elif (mode=="2"):
     imdb_search("sourceimdb")
 
 
 
     for url in urls:
-        #result=requests.get(url)
-        #src = result.content
-        #soup = BeautifulSoup(src, 'lxml')
-        #Se puede ver que la sección information viene de un JavaScript yendo a la sección "Sources" en el buscador, por eso no se puede obtener mediante requests. Para que se ejecute el JavaScript
-        #y aparezca la información completa de forma scrapeable, se debe abrir el link en un buscador. Para eso se utilizó Selenium.
         print("---------------------------------------------------------------------------------------------------")
         print("Item: " + url)
         print("Getting metadata...")
@@ -386,9 +358,9 @@ elif (mode=="2"):
         title = response["Title"]
         year = response["Year"]
         date = response["Released"]
-        rating = response["Rated"]
+        main_rating = response["Rated"]
         genre = response["Genre"]
-        description = response["Plot"]
+        #description = response["Plot"]
 ##        cast =
         directors = response["Director"]
 ##        producers =
@@ -404,21 +376,8 @@ elif (mode=="2"):
         productions=[]
         ratings=[]
 
-        print("Title: " + title)
-        print("Year: " + year)
-        print("Date: " + date)
-        print("Rating: " + rating)
-        print("Genre: " + genre)
-        print("Description: " + description)
-        print("Directors: " + directors)
-        print("Screenwriters: " + screenwriters)
-        print("Production Company: " + production_company)
 
-        #short_descriptions.append(response["Plot"])
-            
-##        browser = webdriver.Firefox(executable_path = r'C:/Users/carlo/Documents/Programming-Projects/Python Scripts/iTunesMediaExtractor/geckodriver.exe')
-##        browser.get(url)
-##        html=browser.page_source
+
         
         cast_crew_url = "https://www.imdb.com/title/" + imdbID + "/fullcredits?ref_=tt_cl_sm#cast"
         release_info_url = "https://www.imdb.com/title/" + imdbID + "/releaseinfo?ref_=tt_ov_inf"
@@ -440,17 +399,19 @@ elif (mode=="2"):
             except KeyError:
                 pass
 
-        print("Cast: " + ', '.join(cast))
+        
 
         header_list = soup.find_all("h4", class_="dataHeaderWithBorder")
-        if ("Produced by" in header_list[3].text):
-            producers_list=soup.find_all("table", class_="simpleTable simpleCreditsTable")
-            producers_list=producers_list[2].find_all("tr")
-            for producer in producers_list:
-                producer=producer.find_all("td")
-                producers.append(producer[0].text.strip() + " - " + producer[2].text.strip())
-            
-        print("Producers: "+ ', '.join(producers))
+        try:
+            if ("Produced by" in header_list[3].text):
+                producers_list=soup.find_all("table", class_="simpleTable simpleCreditsTable")
+                producers_list=producers_list[2].find_all("tr")
+                for producer in producers_list:
+                    producer=producer.find_all("td")
+                    producers.append(producer[0].text.strip() + " - " + producer[2].text.strip())
+        except IndexError:
+            pass
+        
 
 
 
@@ -465,7 +426,7 @@ elif (mode=="2"):
             release_dates.append(release[0].text.strip() + " - " + release[1].text)
             #print(release[0].text.strip() + " - " + release[1].text)
 
-        print("Release Dates: \n" + '\n'.join(sorted(release_dates)))
+        
 
 
 
@@ -485,19 +446,21 @@ elif (mode=="2"):
             for distributor in distributor_list:
                 distributors.append(distributor.text.strip().replace("            "," - "))
 
-        print("Production Companies: \n" + '\n'.join(productions))
-        print("Distributors: \n" + '\n'.join(distributors))
+
         
 
         result=requests.get(ratings_url)
         src = result.content
         soup = BeautifulSoup(src, 'lxml')
         ratings_list = soup.find("tr", id="certifications-list")
-        ratings_list = ratings_list.find_all("li")
-        for rating in ratings_list:
-            ratings.append(rating.find("a").text)
+        try:
+            ratings_list = ratings_list.find_all("li")
+            for rating in ratings_list:
+                ratings.append(rating.find("a").text)
+        except AttributeError:
+            pass
 
-        print("Ratings: \n" + '\n'.join(ratings))
+        
 
 
         result=requests.get(plot_url)
@@ -505,174 +468,68 @@ elif (mode=="2"):
         soup = BeautifulSoup(src, 'lxml')
         description_list = soup.find("ul", id="plot-summaries-content")
         description_list = description_list.find_all("li")
-        description = description_list[0].find("p").text
-        print(description)
-            
+        description = description_list[0].find("p").text.replace("’", "'").replace("“", '"').replace("”", '"')
+
+
+
+        otitle = "Title: " + title
+        oyear = "Year: " + year
+        odate = "Date: " + date
+        omainrating = "Rating: " + main_rating
+        ogenre = "Genre: " + genre
+        odescription = "Description: " + description
+        odirectors = "Directors: " + directors
+        oproducers = "Producers: "+ ', '.join(producers)
+        ocast = "Cast: " + ', '.join(cast)
+        oscreenwriters = "Screenwriters: " + screenwriters
+        oproductioncmpn = "Production Company: " + production_company
+        oreleasedates = "Release Dates: \n" + '\n'.join(sorted(release_dates))
+        oproductioncmpns = "Production Companies: \n" + '\n'.join(productions)
+        odistributors = "Distributors: \n" + '\n'.join(distributors)
+        oratings = "Ratings: \n" + '\n'.join(ratings)
+        spacer="---------------------------------------------------------------------------------------------------"
+
+        output.append(otitle)
+        output.append(oyear)
+        output.append(odate)
+        output.append(omainrating)
+        output.append(ogenre)
+        output.append(odescription)
+        output.append(odirectors)
+        output.append(oproducers)
+        output.append(ocast)
+        output.append(oscreenwriters)
+        output.append(oproductioncmpn)
+        output.append(oreleasedates)
+        output.append(oproductioncmpns)
+        output.append(odistributors)
+        output.append(oratings)
+        output.append(spacer)
+
+        print(otitle)
+        print(oyear)
+        print(odate)
+        print(omainrating)
+        print(ogenre)
+        print(odescription)
+        print(odirectors)
+        print(oproducers)
+        print(ocast)
+        print(oscreenwriters)
+        print(oproductioncmpn)
+        print(oreleasedates)
+        print(oproductioncmpns)
+        print(odistributors)
+        print(oratings)
         
 
-##        result=requests.get(release_info_url)
-##        src = result.content
-##        soup = BeautifulSoup(src, 'lxml')
-##        cast_list = soup.find("table", class_="cast_list")
-##
-##        result=requests.get(release_info_url)
-##        src = result.content
-##        soup = BeautifulSoup(src, 'lxml')
-##        cast_list = soup.find("table", class_="cast_list")
-##
-##        result=requests.get(release_info_url)
-##        src = result.content
-##        soup = BeautifulSoup(src, 'lxml')
-##        cast_list = soup.find("table", class_="cast_list")
-
-
-
+    with open('metadata.txt', 'w') as f:
+        for line in output:
+            f.write("%s\n" % line)
+    print("Done")
         
-##        soup = BeautifulSoup(html, 'lxml')
-##        title = soup.find("h1", class_="product-header__title movie-header__title")
-##        rating = soup.find("svg")
-##        genre = soup.find("a", class_="link link--no-tint")
-##        release_date = soup.find("time")
-##        description = soup.find("p")
-##        crew = soup.find_all("dd", class_="cast-list__detail")
-##        cast=[]
-##        directors=[]
-##        producers=[]
-##        screenwriters=[]
-##
-##        for person in crew: 
-##            data=person.find("a")
-##            data=data["data-metrics-click"]
-##            data=json.loads(data)
-##            data=data["actionDetails"]
-##            role=data["type"]
-##            if role == "cast":
-##                cast.append(person.find("a").text.strip())
-##            elif role == "director":
-##                directors.append(person.find("a").text.strip())
-##            elif role == "producer":
-##                producers.append(person.find("a").text.strip())
-##            elif role == "screenwriter":
-##                screenwriters.append(person.find("a").text.strip())
-##
-##        try:
-##            studio = soup.find("dd", class_="information-list__item__definition").text.strip()
-##        except AttributeError:
-##            studio = ""
-##        try:
-##            cpright = soup.find("dd", class_="information-list__item__definition information-list__item__definition--copyright").text.strip()
-##        except AttributeError:
-##            cpright = ""            
 
 
-
-
-            
-
-
-##        soup = BeautifulSoup(html, 'lxml')
-##        title = soup.find("h1", class_="product-header__title movie-header__title")
-##        rating = soup.find("svg")
-##        genre = soup.find("a", class_="link link--no-tint")
-##        release_date = soup.find("time")
-##        description = soup.find("p")
-##        crew = soup.find_all("dd", class_="cast-list__detail")
-##        cast=[]
-##        directors=[]
-##        producers=[]
-##        screenwriters=[]
-##
-##        for person in crew: 
-##            data=person.find("a")
-##            data=data["data-metrics-click"]
-##            data=json.loads(data)
-##            data=data["actionDetails"]
-##            role=data["type"]
-##            if role == "cast":
-##                cast.append(person.find("a").text.strip())
-##            elif role == "director":
-##                directors.append(person.find("a").text.strip())
-##            elif role == "producer":
-##                producers.append(person.find("a").text.strip())
-##            elif role == "screenwriter":
-##                screenwriters.append(person.find("a").text.strip())
-##
-##        try:
-##            studio = soup.find("dd", class_="information-list__item__definition").text.strip()
-##        except AttributeError:
-##            studio = ""
-##        try:
-##            cpright = soup.find("dd", class_="information-list__item__definition information-list__item__definition--copyright").text.strip()
-##        except AttributeError:
-##            cpright = ""
-##
-##
-##        otitle="Title: " + title.text
-##        ordate="Release Date: " + release_date["datetime"][:10]
-##        orating="Rating: " + rating["aria-label"].replace(" ","-")
-##        ogenre="Genre: " + genre.text
-##        osdescr="Short Description: " + short_description.replace("’", "'").replace("“", '"').replace("”", '"')
-##        odescr="Long Description: " + description.text.replace("’", "'").replace("“", '"').replace("”", '"')
-##        ocast="Cast: " + ', '.join(cast)
-##        odirec="Directors: " + ', '.join(directors)
-##        oprod="Producers: " + ', '.join(producers)
-##        oscreen="Screenwriters: " + ', '.join(screenwriters)
-##        ostudio="Studio: " + studio
-##        ocpright="Copyright: " + cpright
-##        spacer="---------------------------------------------------------------------------------------------------"
-##
-##        output.append(otitle)
-##        output.append(ordate)
-##        output.append(orating)
-##        output.append(ogenre)
-##        output.append(osdescr)
-##        output.append(odescr)
-##        output.append(ocast)
-##        output.append(odirec)
-##        output.append(oprod)
-##        output.append(oscreen)
-##        output.append(ostudio)
-##        output.append(ocpright)
-##        output.append(spacer)
-##
-##            
-##        print(otitle)
-##        print(ordate)
-##        print(orating)
-##        print(ogenre)
-##        print(osdescr)
-##        print(odescr)
-##        print(ocast)
-##        print(odirec)
-##        print(oprod)
-##        print(oscreen)
-##        print(ostudio)
-##        print(ocpright)
-##
-##        browser.close()
-##        print("Metadata extracted")
-##
-##        print("Image: " + img_url)
-##        print("Downloading image...")    
-##        r = requests.get(img_url)
-##        filename= title.text +  ".jpg"
-##
-##        fcharacters=[':', '*', '?', '"', '<', '>', '|', ' ']#, '/', '\'
-##        for fcharacter in fcharacters:
-##            if fcharacter in filename:
-##                filename = filename.replace(fcharacter,"")
-##                                                                          
-##        filename=filename.lower()
-##        with open(filename, 'wb') as f:
-##            f.write(r.content)
-##        print("Download complete")
-##        print("Image saved in: " + filename)
-##        
-##        
-##    with open('metadata.txt', 'w') as f:
-##        for line in output:
-##            f.write("%s\n" % line)
-##    print("Done")
 
 
 
