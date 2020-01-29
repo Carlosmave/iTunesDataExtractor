@@ -9,6 +9,7 @@ short_descriptions=[]
 search_terms=[]
 output=[]
 apikey="e6fa56aa"
+entity=""
 
 def movie_mode():
     print("Choose source:")
@@ -108,11 +109,26 @@ def imdb_search(search_term):
             imdb_choice=choose(imdb_search_results)
             print("Item chosen: " + imdb_choice["Title"]  + " - " + imdb_choice["Year"])
             imdb_id=imdb_choice["imdbID"]
-            imdb_url = 'http://www.omdbapi.com/?apikey=' + apikey + '&i=' + imdb_id + '&type=movie'
-            response = requests.get(imdb_url)
-            response.raise_for_status()
-            response = response.json()
-            short_descriptions.append(response["Plot"])
+            
+            #imdb_url = 'http://www.omdbapi.com/?apikey=' + apikey + '&i=' + imdb_id + '&type=movie'
+            #response = requests.get(imdb_url)
+            #response.raise_for_status()
+            #response = response.json()
+            #short_descriptions.append(response["Plot"])
+
+
+
+            plot_url = "https://www.imdb.com/title/" + imdb_id + "/plotsummary?ref_=tt_ov_pl"
+            result=requests.get(plot_url)
+            src = result.content
+            soup = BeautifulSoup(src, 'lxml')
+            description_list = soup.find("ul", id="plot-summaries-content")
+            description_list = description_list.find_all("li")
+            short_description = description_list[0].find("p").text.replace("’", "'").replace("“", '"').replace("”", '"')
+            short_descriptions.append(short_description)
+
+
+            
             print("---------------------------------------------------------------------------------------------------")
         else:
             print("The iTunes movie name couldn't be found on IMDb, please enter the search term again")
@@ -171,35 +187,61 @@ def itunes_search():
     except KeyboardInterrupt:
         sys.exit()
     if (search_term != "0" and search_term != ""):
-        movie_url = 'https://itunes.apple.com/search?term=' + search_term + '&country=us&entity=movie'
+        movie_url = 'https://itunes.apple.com/search?term=' + search_term + '&country=us&entity=' + entity
         response = requests.get(movie_url)
         response.raise_for_status()
         response = response.json()
         if response["results"]:
-            print("---------------------------------------------------------------------------------------------------")
-            print("Search results on iTunes for: " + search_term)
 
-            counter=1
-            search_results=[]
-            for item in response["results"]:
-                try:
-                    print(str(counter)+ ": " + item["trackName"] + " - " + item["releaseDate"][:4])
-                    counter+=1
-                    search_results.append(item)
-                except KeyError:
-                    pass
-
-            choice=choose(search_results)
-            print("Item chosen: " + choice["trackName"]  + " - " + choice["releaseDate"][:4])
-            url=choice["trackViewUrl"]
-            urls.append(url)
-            imgurl=(choice["artworkUrl100"]).replace("100x100bb", "100000x100000-999")
-            img_urls.append(imgurl)
-            
             if (mode=="1"):
+                print("---------------------------------------------------------------------------------------------------")
+                print("Search results on iTunes for: " + search_term)
+
+                counter=1
+                search_results=[]
+                for item in response["results"]:
+                    try:
+                        print(str(counter)+ ": " + item["trackName"] + " - " + item["releaseDate"][:4])
+                        counter+=1
+                        search_results.append(item)
+                    except KeyError:
+                        pass
+
+                choice=choose(search_results)
+                print("Item chosen: " + choice["trackName"]  + " - " + choice["releaseDate"][:4])
+                url=choice["trackViewUrl"]
+                urls.append(url)
+                imgurl=(choice["artworkUrl100"]).replace("100x100bb", "100000x100000-999")
+                img_urls.append(imgurl)
+            
+            
                 print("---------------------------------------------------------------------------------------------------")
                 print("Search results on IMDb for: " + search_term)
                 imdb_search(choice["trackName"])
+
+            elif (mode=="3"):
+                print("---------------------------------------------------------------------------------------------------")
+                print("Search results on iTunes for: " + search_term)
+
+                counter=1
+                search_results=[]
+                for item in response["results"]:
+                    try:
+                        print(str(counter)+ ": " + item["collectionName"] + " - " + item["releaseDate"][:4])
+                        counter+=1
+                        search_results.append(item)
+                    except KeyError:
+                        pass
+
+                choice=choose(search_results)
+                print("Item chosen: " + choice["collectionName"]  + " - " + choice["releaseDate"][:4])
+                url=choice["collectionViewUrl"]
+                urls.append(url)
+                imgurl=(choice["artworkUrl100"]).replace("100x100bb", "100000x100000-999")
+                img_urls.append(imgurl)
+
+
+                
         else:
             print("No results match the search term entered")
         itunes_search()
@@ -215,9 +257,12 @@ print("Welcome to the iTunesMediaExtractor")
 print("Made by Carlos Martinez")
 mode=media_mode()
 
+    
+
 
 
 if (mode=="1"):
+    entity="movie"
     itunes_search()
 
 
@@ -245,6 +290,7 @@ if (mode=="1"):
         release_date = soup.find("time")
         description = soup.find("p")
         crew = soup.find_all("dd", class_="cast-list__detail")
+        movieid = soup.find("meta", attrs={"name":"apple:content_id"})
         cast=[]
         directors=[]
         producers=[]
@@ -287,6 +333,7 @@ if (mode=="1"):
         oscreen="Screenwriters: " + ', '.join(screenwriters)
         ostudio="Studio: " + studio
         ocpright="Copyright: " + cpright
+        omovieid="Movie ID: " + movieid["content"]
         spacer="---------------------------------------------------------------------------------------------------"
 
         output.append(otitle)
@@ -301,6 +348,7 @@ if (mode=="1"):
         output.append(oscreen)
         output.append(ostudio)
         output.append(ocpright)
+        output.append(omovieid)
         output.append(spacer)
 
             
@@ -316,6 +364,7 @@ if (mode=="1"):
         print(oscreen)
         print(ostudio)
         print(ocpright)
+        print(omovieid)
 
         browser.close()
         print("Metadata extracted")
@@ -337,7 +386,7 @@ if (mode=="1"):
         print("Image saved in: " + filename)
         
         
-    with open('metadata.txt', 'w') as f:
+    with open('metadata.txt', 'w', encoding='utf-8') as f:
         for line in output:
             f.write("%s\n" % line)
     print("Done")
@@ -523,7 +572,7 @@ elif (mode=="2"):
         print(oratings)
         
 
-    with open('metadata.txt', 'w') as f:
+    with open('metadata.txt', 'w', encoding='utf-8') as f:
         for line in output:
             f.write("%s\n" % line)
     print("Done")
@@ -540,7 +589,138 @@ elif (mode=="2"):
 
     
 elif (mode=="3"):
-    print("ddd")
+    entity="tvSeason"
+    itunes_search()
+
+
+    for url, img_url in zip(urls, img_urls):
+        print("---------------------------------------------------------------------------------------------------")
+        print("Item: " + url)
+        print("Getting metadata...")
+            
+        browser = webdriver.Firefox(executable_path = r'C:/Users/carlo/Documents/Programming-Projects/Python Scripts/iTunesMediaExtractor/geckodriver.exe')
+        browser.get(url)
+        html=browser.page_source
+            
+            
+
+
+        soup = BeautifulSoup(html, 'lxml')
+        stitle = soup.find("h1", class_="product-header__title show-header__title").text
+        try:
+            rating = soup.find("svg")["aria-label"].replace(" ","-")
+        except TypeError:
+            rating = ""
+        genre = soup.find("a", class_="link link--no-tint").text
+        srelease_date = soup.find("time")["datetime"][:10]
+        sdescription = soup.find("p", dir="ltr").text.replace("’", "'").replace("“", '"').replace("”", '"')
+        try:
+            cpright = soup.find("div", class_="sosumi product-hero__tracks-sosumi").text.strip()
+        except AttributeError:
+            cpright = ""
+        seasonid = soup.find("meta", attrs={"name":"apple:content_id"})["content"]
+        
+
+##    You can't use a keyword argument called name because the Beautiful Soup search methods already define a name argument.
+##    You also can't use a Python reserved word like for as a keyword argument.
+##    Beautiful Soup provides a special argument called attrs which you can use in these situations. attrs is a dictionary that acts just like the keyword arguments.
+
+        episodes = soup.find_all("li", class_="ember-view tracks__track")
+
+        ostitle = "Season Title: " + stitle
+        osrelease_date = "Season Release Date: " + srelease_date
+        orating = "Rating: " + rating
+        ogenre = "Genre: " + genre
+        osdescription = "Season Description: " + sdescription
+        ocpright = "Copyright: " + cpright
+        oseasonid = "Season ID: " + seasonid
+        spacer="---------------------------------------------------------------------------------------------------"
+
+
+        output.append(ostitle)
+        output.append(osrelease_date)
+        output.append(orating)
+        output.append(ogenre)
+        output.append(osdescription)
+        output.append(ocpright)
+        output.append(oseasonid)
+
+        print(ostitle)
+        print(osrelease_date)
+        print(orating)
+        print(ogenre)
+        print(osdescription)
+        print(ocpright)
+        print(oseasonid)
+
+
+
+        for episode in episodes:
+            episode_id=episode.find("a", class_="link tracks__track__link l-row")["data-episode-id"]
+            episode_number=episode.find("li", class_="inline-list__item inline-list__item--margin-inline-start-large tracks__track__eyebrow-item").text.strip()
+            
+            
+            try:
+                episode_title=episode.find("span", class_="we-truncate we-truncate--multi-line ember-view")["aria-label"]
+            except KeyError:
+                episode_title=episode.find("div", class_="we-clamp ember-view").text
+            episode_description=episode.find("p", dir="ltr").text.replace("’", "'").replace("“", '"').replace("”", '"')
+            episode_release_date=episode.find("time")["datetime"][:10]
+            spacer2="###################################################################################################"
+            oepisode_number="Episode Number: " + episode_number
+            oepisode_title="Episode Title: " + episode_title
+            oepisode_release_date="Episode Release Date: " + episode_release_date
+            oepisode_description="Episode Description: " + episode_description
+            oepisode_id="Episode ID: " + episode_id
+
+            output.append(spacer2)
+            output.append(oepisode_number)
+            output.append(oepisode_title)
+            output.append(oepisode_release_date)
+            output.append(oepisode_description)
+            output.append(oepisode_id)
+
+            print(spacer2)
+            print(oepisode_number)
+            print(oepisode_title)
+            print(oepisode_release_date)
+            print(oepisode_description)
+            print(oepisode_id)
+            
+
+        output.append(spacer)
+        browser.close()
+        print("Metadata extracted")
+
+        print("Image: " + img_url)
+        print("Downloading image...")    
+        r = requests.get(img_url)
+        filename= stitle +  ".jpg"
+
+        fcharacters=[':', '*', '?', '"', '<', '>', '|', ' ']#, '/', '\'
+        for fcharacter in fcharacters:
+            if fcharacter in filename:
+                filename = filename.replace(fcharacter,"")
+                                                                          
+        filename=filename.lower()
+        with open(filename, 'wb') as f:
+            f.write(r.content)
+        print("Download complete")
+        print("Image saved in: " + filename)
+        
+        
+    with open('metadata.txt', 'w', encoding='utf-8') as f:
+        for line in output:
+            f.write("%s\n" % line)
+    print("Done")
+
+
+
+
+
+
+    
+    
 
 
 
