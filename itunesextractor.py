@@ -12,6 +12,7 @@ apikey="e6fa56aa"
 entity=""
 
 def movie_mode():
+    print("---------------------------------------------------------------------------------------------------")
     print("Choose source:")
     print("1: iTunes and IMDb")
     print("2: Just IMDb")
@@ -30,6 +31,7 @@ def movie_mode():
         return movie_mode()
         
 def media_mode():
+    print("---------------------------------------------------------------------------------------------------")
     print("Choose media type:")
     print("1: Movie")
     print("2: TV Show")
@@ -69,22 +71,28 @@ def media_mode():
 
 def choose(search_results):
     try:
-        choice_number = input("Choose an item number: ")
+        choice_number = input("Choose an item number (type 0 to discard the results): ")
     except KeyboardInterrupt:
         sys.exit()
-    try:
-        choice=search_results[int(choice_number)-1]
-        return choice
-    except IndexError:
-        print("The chosen number is not in the list")
-        return choose(search_results)
-    except ValueError:
-        print("Please insert a number")
-        return choose(search_results)
+    if(choice_number!="0"):
+        try:
+            choice=search_results[int(choice_number)-1]
+            return choice
+        except IndexError:
+            print("The chosen number is not in the list")
+            return choose(search_results)
+        except ValueError:
+            print("Please insert a number")
+            return choose(search_results)
+    else:
+        print("No number chosen, discarding results")
+        return None
 
 
 def imdb_search(search_term):
     if (search_term!="sourceimdb"):
+        print("---------------------------------------------------------------------------------------------------")
+        print("Search results on IMDb for: " + search_term)
         imdb_url = 'http://www.omdbapi.com/?apikey=' + apikey + '&s=' + search_term + '&type=movie'
         response = requests.get(imdb_url)
         response.raise_for_status()
@@ -107,35 +115,48 @@ def imdb_search(search_term):
                     pass
                 i+=1
             imdb_choice=choose(imdb_search_results)
-            print("Item chosen: " + imdb_choice["Title"]  + " - " + imdb_choice["Year"])
-            imdb_id=imdb_choice["imdbID"]
+            if (imdb_choice !=None):
             
-            #imdb_url = 'http://www.omdbapi.com/?apikey=' + apikey + '&i=' + imdb_id + '&type=movie'
-            #response = requests.get(imdb_url)
-            #response.raise_for_status()
-            #response = response.json()
-            #short_descriptions.append(response["Plot"])
+                print("Item chosen: " + imdb_choice["Title"]  + " - " + imdb_choice["Year"])
+                imdb_id=imdb_choice["imdbID"]
+                
+                #imdb_url = 'http://www.omdbapi.com/?apikey=' + apikey + '&i=' + imdb_id + '&type=movie'
+                #response = requests.get(imdb_url)
+                #response.raise_for_status()
+                #response = response.json()
+                #short_descriptions.append(response["Plot"])
 
 
 
-            plot_url = "https://www.imdb.com/title/" + imdb_id + "/plotsummary?ref_=tt_ov_pl"
-            result=requests.get(plot_url)
-            src = result.content
-            soup = BeautifulSoup(src, 'lxml')
-            description_list = soup.find("ul", id="plot-summaries-content")
-            description_list = description_list.find_all("li")
-            short_description = description_list[0].find("p").text.replace("’", "'").replace("“", '"').replace("”", '"')
-            short_descriptions.append(short_description)
+                plot_url = "https://www.imdb.com/title/" + imdb_id + "/plotsummary?ref_=tt_ov_pl"
+                result=requests.get(plot_url)
+                src = result.content
+                soup = BeautifulSoup(src, 'lxml')
+                description_list = soup.find("ul", id="plot-summaries-content")
+                description_list = description_list.find_all("li")
+                short_description = description_list[0].find("p").text.replace("’", "'").replace("“", '"').replace("”", '"')
+                short_descriptions.append(short_description)
+            else:
+                try:
+                    search_term = input("Enter search term: ")
+                except KeyboardInterrupt:
+                    sys.exit()
+                #print("---------------------------------------------------------------------------------------------------")
+                #print("Search results on IMDb for: " + search_term)
+                imdb_search(search_term)
+                
 
 
             
-            print("---------------------------------------------------------------------------------------------------")
+            #print("---------------------------------------------------------------------------------------------------")
         else:
             print("The iTunes movie name couldn't be found on IMDb, please enter the search term again")
             try:
                 search_term = input("Enter search term: ")
             except KeyboardInterrupt:
                 sys.exit()
+            #print("---------------------------------------------------------------------------------------------------")
+            #print("Search results on IMDb for: " + search_term)
             imdb_search(search_term)
     else:
         try:
@@ -143,13 +164,15 @@ def imdb_search(search_term):
         except KeyboardInterrupt:
             sys.exit()
         if (search_term != "0" and search_term != ""):
+            print("---------------------------------------------------------------------------------------------------")
+            print("Search results on IMDb for: " + search_term)
             imdb_url = 'http://www.omdbapi.com/?apikey=' + apikey + '&s=' + search_term + '&type=movie'
             response = requests.get(imdb_url)
             response.raise_for_status()
             response = response.json()
             if response["Response"]=="True":
-                print("---------------------------------------------------------------------------------------------------")
-                print("Search results on IMDb for: " + search_term)
+##                print("---------------------------------------------------------------------------------------------------")
+##                print("Search results on IMDb for: " + search_term)
                 i=1
                 counter=1
                 imdb_search_results=[]
@@ -167,10 +190,11 @@ def imdb_search(search_term):
                         pass
                     i+=1
                 imdb_choice=choose(imdb_search_results)
-                print("Item chosen: " + imdb_choice["Title"]  + " - " + imdb_choice["Year"])
-                imdb_id=imdb_choice["imdbID"]
-                imdb_url = 'http://www.omdbapi.com/?apikey=' + apikey + '&i=' + imdb_id + '&type=movie'
-                urls.append(imdb_url)              
+                if (imdb_choice !=None):
+                    print("Item chosen: " + imdb_choice["Title"]  + " - " + imdb_choice["Year"])
+                    imdb_id=imdb_choice["imdbID"]
+                    imdb_url = 'http://www.omdbapi.com/?apikey=' + apikey + '&i=' + imdb_id + '&type=movie'
+                    urls.append(imdb_url)              
             else:
                 print("No results match the search term entered")
             imdb_search("sourceimdb")
@@ -338,6 +362,9 @@ def choose_country():
     "ye": "Yemen",
     "za": "South Africa",
     "zw": "Zimbabwe"}
+    countries = dict(sorted(countries.items(), key=lambda x: x[1]))
+    print("---------------------------------------------------------------------------------------------------")
+    print("iTunes countries:")
     keys=list(countries.keys())
     values=list(countries.values())
     iterator=1
@@ -352,20 +379,20 @@ def choose_country():
     #print(keys[int(country)-1])
     try:
         country=keys[int(country)-1]
-        print("Chosen country: " + country)
+        print("Chosen country: " + country.upper())
         return country
     except IndexError:
         print("The chosen number is not in the list")
         return choose_country()
     except ValueError:
         country="us"
-        print("Chosen country: " + country)
+        print("Chosen country: " + country.upper())
         return country
         
 
 
 def itunes_search():
-    
+    print("---------------------------------------------------------------------------------------------------")
     try:
         search_term = input("Enter search term (type 0 when you're done): ")
     except KeyboardInterrupt:
@@ -376,11 +403,13 @@ def itunes_search():
         response = requests.get(movie_url)
         response.raise_for_status()
         response = response.json()
+        print("---------------------------------------------------------------------------------------------------")
+        print("Search results on iTunes (" + country.upper() + ") for: " + search_term)
         if response["results"]:
 
             if (mode=="1"):
-                print("---------------------------------------------------------------------------------------------------")
-                print("Search results on iTunes for: " + search_term)
+##                print("---------------------------------------------------------------------------------------------------")
+##                print("Search results on iTunes for: " + search_term)
 
                 counter=1
                 search_results=[]
@@ -393,20 +422,19 @@ def itunes_search():
                         pass
 
                 choice=choose(search_results)
-                print("Item chosen: " + choice["trackName"]  + " - " + choice["releaseDate"][:4])
-                url=choice["trackViewUrl"]
-                urls.append(url)
-                imgurl=(choice["artworkUrl100"]).replace("100x100bb", "100000x100000-999")
-                img_urls.append(imgurl)
-            
-            
-                print("---------------------------------------------------------------------------------------------------")
-                print("Search results on IMDb for: " + search_term)
-                imdb_search(choice["trackName"])
+                if (choice !=None):
+                    print("Item chosen: " + choice["trackName"]  + " - " + choice["releaseDate"][:4])
+                    url=choice["trackViewUrl"]
+                    urls.append(url)
+                    imgurl=(choice["artworkUrl100"]).replace("100x100bb", "100000x100000-999")
+                    img_urls.append(imgurl)
+                    #print("---------------------------------------------------------------------------------------------------")
+                    #print("Search results on IMDb for: " + choice["trackName"])
+                    imdb_search(choice["trackName"])
 
             elif (mode=="3"):
-                print("---------------------------------------------------------------------------------------------------")
-                print("Search results on iTunes for: " + search_term)
+##                print("---------------------------------------------------------------------------------------------------")
+##                print("Search results on iTunes for: " + search_term)
 
                 counter=1
                 search_results=[]
@@ -419,11 +447,12 @@ def itunes_search():
                         pass
 
                 choice=choose(search_results)
-                print("Item chosen: " + choice["collectionName"]  + " - " + choice["releaseDate"][:4])
-                url=choice["collectionViewUrl"]
-                urls.append(url)
-                imgurl=(choice["artworkUrl100"]).replace("100x100bb", "100000x100000-999")
-                img_urls.append(imgurl)
+                if (choice !=None):
+                    print("Item chosen: " + choice["collectionName"]  + " - " + choice["releaseDate"][:4])
+                    url=choice["collectionViewUrl"]
+                    urls.append(url)
+                    imgurl=(choice["artworkUrl100"]).replace("100x100bb", "100000x100000-999")
+                    img_urls.append(imgurl)
 
 
                 
@@ -458,7 +487,8 @@ if (mode=="1"):
         #Se puede ver que la sección information viene de un JavaScript yendo a la sección "Sources" en el buscador, por eso no se puede obtener mediante requests. Para que se ejecute el JavaScript
         #y aparezca la información completa de forma scrapeable, se debe abrir el link en un buscador. Para eso se utilizó Selenium.
         print("---------------------------------------------------------------------------------------------------")
-        print("Item: " + url)
+        print("Movie URL: " + url)
+        print("Country: " + url.split(".com/")[1][:2].upper())
         print("Getting metadata...")
             
         browser = webdriver.Firefox(executable_path = r'C:/Users/carlo/Documents/Programming-Projects/Python Scripts/iTunesMediaExtractor/geckodriver.exe')
@@ -505,7 +535,8 @@ if (mode=="1"):
         except AttributeError:
             cpright = ""
 
-
+        ourl="Movie URL: " + url
+        ocountry="Country: " + url.split(".com/")[1][:2].upper()
         otitle="Title: " + title.text
         ordate="Release Date: " + release_date["datetime"][:10]
         orating="Rating: " + rating["aria-label"].replace(" ","-")
@@ -521,6 +552,8 @@ if (mode=="1"):
         omovieid="Movie ID: " + movieid["content"]
         spacer="---------------------------------------------------------------------------------------------------"
 
+        output.append(ourl)
+        output.append(ocountry)
         output.append(otitle)
         output.append(ordate)
         output.append(orating)
@@ -554,7 +587,7 @@ if (mode=="1"):
         browser.close()
         print("Metadata extracted")
 
-        print("Image: " + img_url)
+        print("Image URL: " + img_url)
         print("Downloading image...")    
         r = requests.get(img_url)
         filename= title.text +  ".jpg"
@@ -584,7 +617,7 @@ elif (mode=="2"):
 
     for url in urls:
         print("---------------------------------------------------------------------------------------------------")
-        print("Item: " + url)
+        print("Movie URL: " + "https://www.imdb.com/title/" + url.split("&i=")[1].split("&type=")[0] + "/")
         print("Getting metadata...")
         response = requests.get(url)
         response.raise_for_status()
@@ -705,7 +738,7 @@ elif (mode=="2"):
         description = description_list[0].find("p").text.replace("’", "'").replace("“", '"').replace("”", '"')
 
 
-
+        ourl="Movie URL: " + "https://www.imdb.com/title/" + imdbID + "/"
         otitle = "Title: " + title
         oyear = "Year: " + year
         odate = "Date: " + date
@@ -723,6 +756,7 @@ elif (mode=="2"):
         oratings = "Ratings: \n" + '\n'.join(ratings)
         spacer="---------------------------------------------------------------------------------------------------"
 
+        output.append(ourl)
         output.append(otitle)
         output.append(oyear)
         output.append(odate)
@@ -780,15 +814,17 @@ elif (mode=="3"):
 
     for url, img_url in zip(urls, img_urls):
         print("---------------------------------------------------------------------------------------------------")
-        print("Item: " + url)
+        print("TV Show URL: " + url)
+        print("Country: " + url.split(".com/")[1][:2].upper()) 
         print("Getting metadata...")
+
             
         browser = webdriver.Firefox(executable_path = r'C:/Users/carlo/Documents/Programming-Projects/Python Scripts/iTunesMediaExtractor/geckodriver.exe')
         browser.get(url)
         html=browser.page_source
             
             
-
+        
 
         soup = BeautifulSoup(html, 'lxml')
         stitle = soup.find("h1", class_="product-header__title show-header__title").text
@@ -812,6 +848,8 @@ elif (mode=="3"):
 
         episodes = soup.find_all("li", class_="ember-view tracks__track")
 
+        ourl="TV Show URL: " + url
+        ocountry="Country: " + url.split(".com/")[1][:2].upper()
         ostitle = "Season Title: " + stitle
         osrelease_date = "Season Release Date: " + srelease_date
         orating = "Rating: " + rating
@@ -821,7 +859,8 @@ elif (mode=="3"):
         oseasonid = "Season ID: " + seasonid
         spacer="---------------------------------------------------------------------------------------------------"
 
-
+        output.append(ourl)
+        output.append(ocountry)
         output.append(ostitle)
         output.append(osrelease_date)
         output.append(orating)
@@ -877,7 +916,7 @@ elif (mode=="3"):
         browser.close()
         print("Metadata extracted")
 
-        print("Image: " + img_url)
+        print("Image URL: " + img_url)
         print("Downloading image...")    
         r = requests.get(img_url)
         filename= stitle +  ".jpg"
