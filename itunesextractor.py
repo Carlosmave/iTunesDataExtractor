@@ -1,6 +1,10 @@
-import requests, json, sys
+import requests, json, sys, time
 from bs4 import BeautifulSoup
 from selenium import webdriver
+
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util.retry import Retry
+from selenium.common.exceptions import WebDriverException
 
 mode=""
 urls=[]
@@ -10,6 +14,13 @@ search_terms=[]
 output=[]
 apikey="e6fa56aa"
 entity=""
+
+session = requests.Session()
+retry = Retry(connect=5, backoff_factor=0.5)
+adapter = HTTPAdapter(max_retries=retry)
+session.mount('http://', adapter)
+session.mount('https://', adapter)
+
 
 def movie_mode():
     print("---------------------------------------------------------------------------------------------------")
@@ -94,7 +105,7 @@ def imdb_search(search_term):
         print("---------------------------------------------------------------------------------------------------")
         print("Search results on IMDb for: " + search_term)
         imdb_url = 'http://www.omdbapi.com/?apikey=' + apikey + '&s=' + search_term + '&type=movie'
-        response = requests.get(imdb_url)
+        response = session.get(imdb_url)
         response.raise_for_status()
         response = response.json()
         if response["Response"]=="True":
@@ -103,7 +114,7 @@ def imdb_search(search_term):
             imdb_search_results=[]
             while(i<5):
                 imdb_url = 'http://www.omdbapi.com/?apikey=' + apikey + '&s=' + search_term + '&type=movie&page=' + str(i)
-                response = requests.get(imdb_url)
+                response = session.get(imdb_url)
                 response.raise_for_status()
                 response = response.json()
                 try:
@@ -112,7 +123,8 @@ def imdb_search(search_term):
                         counter+=1
                         imdb_search_results.append(item)
                 except KeyError:
-                    pass
+                    break
+                    #pass
                 i+=1
             imdb_choice=choose(imdb_search_results)
             if (imdb_choice !=None):
@@ -129,12 +141,12 @@ def imdb_search(search_term):
 
 
                 plot_url = "https://www.imdb.com/title/" + imdb_id + "/plotsummary?ref_=tt_ov_pl"
-                result=requests.get(plot_url)
+                result=session.get(plot_url)
                 src = result.content
                 soup = BeautifulSoup(src, 'lxml')
                 description_list = soup.find("ul", id="plot-summaries-content")
                 description_list = description_list.find_all("li")
-                short_description = description_list[0].find("p").text.replace("’", "'").replace("“", '"').replace("”", '"')
+                short_description = description_list[0].find("p").text.replace("’", "'").replace("“", '"').replace("”", '"').replace("…", "...")
                 short_descriptions.append(short_description)
             else:
                 try:
@@ -167,7 +179,7 @@ def imdb_search(search_term):
             print("---------------------------------------------------------------------------------------------------")
             print("Search results on IMDb for: " + search_term)
             imdb_url = 'http://www.omdbapi.com/?apikey=' + apikey + '&s=' + search_term + '&type=movie'
-            response = requests.get(imdb_url)
+            response = session.get(imdb_url)
             response.raise_for_status()
             response = response.json()
             if response["Response"]=="True":
@@ -178,7 +190,7 @@ def imdb_search(search_term):
                 imdb_search_results=[]
                 while(i<5):
                     imdb_url = 'http://www.omdbapi.com/?apikey=' + apikey + '&s=' + search_term + '&type=movie&page=' + str(i)
-                    response = requests.get(imdb_url)
+                    response = session.get(imdb_url)
                     response.raise_for_status()
                     response = response.json()
                     try:
@@ -187,7 +199,8 @@ def imdb_search(search_term):
                             counter+=1
                             imdb_search_results.append(item)
                     except KeyError:
-                        pass
+                        break
+                        #pass
                     i+=1
                 imdb_choice=choose(imdb_search_results)
                 if (imdb_choice !=None):
@@ -400,7 +413,7 @@ def itunes_search():
     if (search_term != "0" and search_term != ""):
         country=choose_country()
         movie_url = 'https://itunes.apple.com/search?term=' + search_term + '&country=' + country + '&entity=' + entity
-        response = requests.get(movie_url)
+        response = session.get(movie_url)
         response.raise_for_status()
         response = response.json()
         print("---------------------------------------------------------------------------------------------------")
@@ -491,16 +504,27 @@ if (mode=="1"):
         print("Country: " + url.split(".com/")[1][:2].upper())
         print("Getting metadata...")
             
-        browser = webdriver.Firefox(executable_path = r'C:/Users/carlo/Documents/Programming-Projects/Python Scripts/iTunesMediaExtractor/geckodriver.exe')
-        browser.get(url)
-        html=browser.page_source
+##        browser = webdriver.Firefox(executable_path = r'C:/Users/carlo/Documents/Programming-Projects/Python Scripts/iTunesMediaExtractor/geckodriver.exe')
+
+        html=None
+        while (html == None):
+            try:
+                browser = webdriver.Firefox(executable_path = r'C:/Users/carlo/Documents/Programming-Projects/Python Scripts/iTunesMediaExtractor/geckodriver.exe')
+                browser.get(url)
+                html=browser.page_source
+            except WebDriverException:
+                browser.close()
+                time.sleep(1)
             
             
 
 
         soup = BeautifulSoup(html, 'lxml')
         title = soup.find("h1", class_="product-header__title movie-header__title")
-        rating = soup.find("svg")
+        try:
+            rating = soup.find("svg")["aria-label"].replace(" ","-")
+        except TypeError:
+            rating = soup.find("span", class_="badge").text
         genre = soup.find("a", class_="link link--no-tint")
         release_date = soup.find("time")
         description = soup.find("p")
@@ -539,10 +563,10 @@ if (mode=="1"):
         ocountry="Country: " + url.split(".com/")[1][:2].upper()
         otitle="Title: " + title.text
         ordate="Release Date: " + release_date["datetime"][:10]
-        orating="Rating: " + rating["aria-label"].replace(" ","-")
+        orating="Rating: " + rating
         ogenre="Genre: " + genre.text
-        osdescr="Short Description: " + short_description.replace("’", "'").replace("“", '"').replace("”", '"')
-        odescr="Long Description: " + description.text.replace("’", "'").replace("“", '"').replace("”", '"')
+        osdescr="Short Description: " + short_description.replace("’", "'").replace("“", '"').replace("”", '"').replace("…", "...")
+        odescr="Long Description: " + description.text.replace("’", "'").replace("“", '"').replace("”", '"').replace("…", "...")
         ocast="Cast: " + ', '.join(cast)
         odirec="Directors: " + ', '.join(directors)
         oprod="Producers: " + ', '.join(producers)
@@ -589,7 +613,16 @@ if (mode=="1"):
 
         print("Image URL: " + img_url)
         print("Downloading image...")    
-        r = requests.get(img_url)
+        #r = requests.get(img_url)
+
+
+        
+
+
+        r = session.get(img_url)
+
+
+        
         filename= title.text +  ".jpg"
 
         fcharacters=[':', '*', '?', '"', '<', '>', '|', ' ']#, '/', '\'
@@ -602,6 +635,7 @@ if (mode=="1"):
             f.write(r.content)
         print("Download complete")
         print("Image saved in: " + filename)
+        #time.sleep(1)
         
         
     with open('metadata.txt', 'w', encoding='utf-8') as f:
@@ -619,7 +653,7 @@ elif (mode=="2"):
         print("---------------------------------------------------------------------------------------------------")
         print("Movie URL: " + "https://www.imdb.com/title/" + url.split("&i=")[1].split("&type=")[0] + "/")
         print("Getting metadata...")
-        response = requests.get(url)
+        response = session.get(url)
         response.raise_for_status()
         response = response.json()
         title = response["Title"]
@@ -654,7 +688,7 @@ elif (mode=="2"):
 
 
         
-        result=requests.get(cast_crew_url)
+        result=session.get(cast_crew_url)
         src = result.content
         soup = BeautifulSoup(src, 'lxml')
         cast_list = soup.find("table", class_="cast_list")
@@ -682,7 +716,7 @@ elif (mode=="2"):
 
 
 
-        result=requests.get(release_info_url)
+        result=session.get(release_info_url)
         src = result.content
         soup = BeautifulSoup(src, 'lxml')
         release_list = soup.find("table", class_="ipl-zebra-list ipl-zebra-list--fixed-first release-dates-table-test-only")
@@ -697,7 +731,7 @@ elif (mode=="2"):
 
 
 
-        result=requests.get(company_credits_url)
+        result=session.get(company_credits_url)
         src = result.content
         soup = BeautifulSoup(src, 'lxml')
         production_header = soup.find("h4", id="production")
@@ -716,7 +750,7 @@ elif (mode=="2"):
 
         
 
-        result=requests.get(ratings_url)
+        result=session.get(ratings_url)
         src = result.content
         soup = BeautifulSoup(src, 'lxml')
         ratings_list = soup.find("tr", id="certifications-list")
@@ -730,12 +764,12 @@ elif (mode=="2"):
         
 
 
-        result=requests.get(plot_url)
+        result=session.get(plot_url)
         src = result.content
         soup = BeautifulSoup(src, 'lxml')
         description_list = soup.find("ul", id="plot-summaries-content")
         description_list = description_list.find_all("li")
-        description = description_list[0].find("p").text.replace("’", "'").replace("“", '"').replace("”", '"')
+        description = description_list[0].find("p").text.replace("’", "'").replace("“", '"').replace("”", '"').replace("…", "...")
 
 
         ourl="Movie URL: " + "https://www.imdb.com/title/" + imdbID + "/"
@@ -819,9 +853,18 @@ elif (mode=="3"):
         print("Getting metadata...")
 
             
-        browser = webdriver.Firefox(executable_path = r'C:/Users/carlo/Documents/Programming-Projects/Python Scripts/iTunesMediaExtractor/geckodriver.exe')
-        browser.get(url)
-        html=browser.page_source
+        #browser = webdriver.Firefox(executable_path = r'C:/Users/carlo/Documents/Programming-Projects/Python Scripts/iTunesMediaExtractor/geckodriver.exe')
+        #browser.get(url)
+        #html=browser.page_source
+        html=None
+        while (html == None):
+            try:
+                browser = webdriver.Firefox(executable_path = r'C:/Users/carlo/Documents/Programming-Projects/Python Scripts/iTunesMediaExtractor/geckodriver.exe')
+                browser.get(url)
+                html=browser.page_source
+            except WebDriverException:
+                browser.close()
+                time.sleep(1)
             
             
         
@@ -832,9 +875,15 @@ elif (mode=="3"):
             rating = soup.find("svg")["aria-label"].replace(" ","-")
         except TypeError:
             rating = ""
+        if (rating == ""):
+            try:
+                rating = soup.find("span", class_="badge").text
+            except AttributeError:
+                rating=""
+        
         genre = soup.find("a", class_="link link--no-tint").text
         srelease_date = soup.find("time")["datetime"][:10]
-        sdescription = soup.find("p", dir="ltr").text.replace("’", "'").replace("“", '"').replace("”", '"')
+        sdescription = soup.find("p", dir="ltr").text.replace("’", "'").replace("“", '"').replace("”", '"').replace("…", "...")
         try:
             cpright = soup.find("div", class_="sosumi product-hero__tracks-sosumi").text.strip()
         except AttributeError:
@@ -888,7 +937,7 @@ elif (mode=="3"):
                 episode_title=episode.find("span", class_="we-truncate we-truncate--multi-line ember-view")["aria-label"]
             except KeyError:
                 episode_title=episode.find("div", class_="we-clamp ember-view").text
-            episode_description=episode.find("p", dir="ltr").text.replace("’", "'").replace("“", '"').replace("”", '"')
+            episode_description=episode.find("p", dir="ltr").text.replace("’", "'").replace("“", '"').replace("”", '"').replace("…", "...")
             episode_release_date=episode.find("time")["datetime"][:10]
             spacer2="###################################################################################################"
             oepisode_number="Episode Number: " + episode_number
@@ -918,7 +967,7 @@ elif (mode=="3"):
 
         print("Image URL: " + img_url)
         print("Downloading image...")    
-        r = requests.get(img_url)
+        r = session.get(img_url)
         filename= stitle +  ".jpg"
 
         fcharacters=[':', '*', '?', '"', '<', '>', '|', ' ']#, '/', '\'
