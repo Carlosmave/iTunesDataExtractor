@@ -146,7 +146,7 @@ def imdb_search(search_term):
                 soup = BeautifulSoup(src, 'lxml')
                 description_list = soup.find("ul", id="plot-summaries-content")
                 description_list = description_list.find_all("li")
-                short_description = description_list[0].find("p").text.replace("’", "'").replace("“", '"').replace("”", '"').replace("…", "...")
+                short_description = description_list[0].find("p").text.replace("’", "'").replace("“", '"').replace("”", '"').replace("…", "...").replace("  ", " ")
                 short_descriptions.append(short_description)
             else:
                 try:
@@ -565,8 +565,8 @@ if (mode=="1"):
         ordate="Release Date: " + release_date["datetime"][:10]
         orating="Rating: " + rating
         ogenre="Genre: " + genre.text
-        osdescr="Short Description: " + short_description.replace("’", "'").replace("“", '"').replace("”", '"').replace("…", "...")
-        odescr="Long Description: " + description.text.replace("’", "'").replace("“", '"').replace("”", '"').replace("…", "...")
+        osdescr="Short Description: " + short_description.replace("’", "'").replace("“", '"').replace("”", '"').replace("…", "...").replace("  ", " ")
+        odescr="Long Description: " + description.text.replace("’", "'").replace("“", '"').replace("”", '"').replace("…", "...").replace("  ", " ")
         ocast="Cast: " + ', '.join(cast)
         odirec="Directors: " + ', '.join(directors)
         oprod="Producers: " + ', '.join(producers)
@@ -625,7 +625,7 @@ if (mode=="1"):
         
         filename= title.text +  ".jpg"
 
-        fcharacters=[':', '*', '?', '"', '<', '>', '|', ' ']#, '/', '\'
+        fcharacters=[':', '*', '?', '"', '<', '>', '|', ' ', "'", "/"]#, '/', '\'
         for fcharacter in fcharacters:
             if fcharacter in filename:
                 filename = filename.replace(fcharacter,"")
@@ -769,7 +769,7 @@ elif (mode=="2"):
         soup = BeautifulSoup(src, 'lxml')
         description_list = soup.find("ul", id="plot-summaries-content")
         description_list = description_list.find_all("li")
-        description = description_list[0].find("p").text.replace("’", "'").replace("“", '"').replace("”", '"').replace("…", "...")
+        description = description_list[0].find("p").text.replace("’", "'").replace("“", '"').replace("”", '"').replace("…", "...").replace("  ", " ")
 
 
         ourl="Movie URL: " + "https://www.imdb.com/title/" + imdbID + "/"
@@ -883,7 +883,7 @@ elif (mode=="3"):
         
         genre = soup.find("a", class_="link link--no-tint").text
         srelease_date = soup.find("time")["datetime"][:10]
-        sdescription = soup.find("p", dir="ltr").text.replace("’", "'").replace("“", '"').replace("”", '"').replace("…", "...")
+        sdescription = soup.find("p", dir="ltr").text.replace("’", "'").replace("“", '"').replace("”", '"').replace("…", "...").replace("  ", " ")
         try:
             cpright = soup.find("div", class_="sosumi product-hero__tracks-sosumi").text.strip()
         except AttributeError:
@@ -937,7 +937,7 @@ elif (mode=="3"):
                 episode_title=episode.find("span", class_="we-truncate we-truncate--multi-line ember-view")["aria-label"]
             except KeyError:
                 episode_title=episode.find("div", class_="we-clamp ember-view").text
-            episode_description=episode.find("p", dir="ltr").text.replace("’", "'").replace("“", '"').replace("”", '"').replace("…", "...")
+            episode_description=episode.find("p", dir="ltr").text.replace("’", "'").replace("“", '"').replace("”", '"').replace("…", "...").replace("  ", " ")
             episode_release_date=episode.find("time")["datetime"][:10]
             spacer2="###################################################################################################"
             oepisode_number="Episode Number: " + episode_number
@@ -970,7 +970,7 @@ elif (mode=="3"):
         r = session.get(img_url)
         filename= stitle +  ".jpg"
 
-        fcharacters=[':', '*', '?', '"', '<', '>', '|', ' ']#, '/', '\'
+        fcharacters=[':', '*', '?', '"', '<', '>', '|', ' ', "'", "/"]#, '/', '\'
         for fcharacter in fcharacters:
             if fcharacter in filename:
                 filename = filename.replace(fcharacter,"")
