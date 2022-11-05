@@ -2,6 +2,9 @@ import requests, json, sys, time
 from bs4 import BeautifulSoup
 from selenium import webdriver
 
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
+
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
 from selenium.common.exceptions import WebDriverException
@@ -40,7 +43,7 @@ def movie_mode():
     else:
         print("The chosen number is not in the list")
         return movie_mode()
-        
+
 def media_mode():
     print("---------------------------------------------------------------------------------------------------")
     print("Choose media type:")
@@ -60,7 +63,7 @@ def media_mode():
         print("The chosen number is not in the list")
         return media_mode()
 
-        
+
 
 ##def search():
 ##    search_term = input("Enter search term (type 0 when you're done): ")
@@ -78,7 +81,7 @@ def media_mode():
 
 
 
-        
+
 
 def choose(search_results):
     try:
@@ -128,10 +131,10 @@ def imdb_search(search_term):
                 i+=1
             imdb_choice=choose(imdb_search_results)
             if (imdb_choice !=None):
-            
+
                 print("Item chosen: " + imdb_choice["Title"]  + " - " + imdb_choice["Year"])
                 imdb_id=imdb_choice["imdbID"]
-                
+
                 #imdb_url = 'http://www.omdbapi.com/?apikey=' + apikey + '&i=' + imdb_id + '&type=movie'
                 #response = requests.get(imdb_url)
                 #response.raise_for_status()
@@ -156,10 +159,10 @@ def imdb_search(search_term):
                 #print("---------------------------------------------------------------------------------------------------")
                 #print("Search results on IMDb for: " + search_term)
                 imdb_search(search_term)
-                
 
 
-            
+
+
             #print("---------------------------------------------------------------------------------------------------")
         else:
             print("The iTunes movie name couldn't be found on IMDb, please enter the search term again")
@@ -207,7 +210,7 @@ def imdb_search(search_term):
                     print("Item chosen: " + imdb_choice["Title"]  + " - " + imdb_choice["Year"])
                     imdb_id=imdb_choice["imdbID"]
                     imdb_url = 'http://www.omdbapi.com/?apikey=' + apikey + '&i=' + imdb_id + '&type=movie'
-                    urls.append(imdb_url)              
+                    urls.append(imdb_url)
             else:
                 print("No results match the search term entered")
             imdb_search("sourceimdb")
@@ -401,7 +404,7 @@ def choose_country():
         country="us"
         print("Chosen country: " + country.upper())
         return country
-        
+
 
 
 def itunes_search():
@@ -468,7 +471,7 @@ def itunes_search():
                     img_urls.append(imgurl)
 
 
-                
+
         else:
             print("No results match the search term entered")
         itunes_search()
@@ -479,12 +482,12 @@ def itunes_search():
         print(str(len(urls)) + " search terms added")
 
 
-        
+
 print("Welcome to the iTunesMediaExtractor")
 print("Made by Carlos Martinez")
 mode=media_mode()
 
-    
+
 
 
 
@@ -503,26 +506,26 @@ if (mode=="1"):
         print("Movie URL: " + url)
         print("Country: " + url.split(".com/")[1][:2].upper())
         print("Getting metadata...")
-            
+
 ##        browser = webdriver.Firefox(executable_path = r'C:/Users/carlo/Documents/Programming-Projects/Python Scripts/iTunesMediaExtractor/geckodriver.exe')
 
         html=None
         while (html == None):
             try:
-                browser = webdriver.Firefox(executable_path = r'C:/Users/carlo/Documents/Programming-Projects/Python Scripts/iTunesMediaExtractor/geckodriver.exe')
+                # browser = webdriver.Firefox(executable_path = r'C:/Users/carlo/Documents/Programming-Projects/Python Scripts/iTunesMediaExtractor/geckodriver.exe')
+                browser = webdriver.Chrome(service = Service(ChromeDriverManager().install()))
                 browser.get(url)
                 html=browser.page_source
             except WebDriverException:
                 browser.close()
                 time.sleep(1)
-            
-            
-
 
         soup = BeautifulSoup(html, 'lxml')
         title = soup.find("h1", class_="product-header__title movie-header__title")
+        time.sleep(3)
         try:
             rating = soup.find("svg")["aria-label"].replace(" ","-")
+            # rating = soup.find("li", attrs = {"class": "inline-list__item inline-list__item--margin-inline-end-rating"}).find("svg")["aria-label"].replace(" ","-")
         except TypeError:
             rating = soup.find("span", class_="badge").text
         genre = soup.find("a", class_="link link--no-tint")
@@ -535,7 +538,7 @@ if (mode=="1"):
         producers=[]
         screenwriters=[]
 
-        for person in crew: 
+        for person in crew:
             data=person.find("a")
             data=data["data-metrics-click"]
             data=json.loads(data)
@@ -593,13 +596,13 @@ if (mode=="1"):
         output.append(omovieid)
         output.append(spacer)
 
-            
+
         print(otitle)
         print(ordate)
         print(orating)
         print(ogenre)
         print(osdescr)
-        print(odescr) 
+        print(odescr)
         print(odirec)
         print(oprod)
         print(ocast)
@@ -612,32 +615,32 @@ if (mode=="1"):
         print("Metadata extracted")
 
         print("Image URL: " + img_url)
-        print("Downloading image...")    
+        print("Downloading image...")
         #r = requests.get(img_url)
 
 
-        
+
 
 
         r = session.get(img_url)
 
 
-        
+
         filename= title.text +  ".jpg"
 
         fcharacters=[':', '*', '?', '"', '<', '>', '|', ' ', "'", "/"]#, '/', '\'
         for fcharacter in fcharacters:
             if fcharacter in filename:
                 filename = filename.replace(fcharacter,"")
-                                                                          
+
         filename=filename.lower()
         with open(filename, 'wb') as f:
             f.write(r.content)
         print("Download complete")
         print("Image saved in: " + filename)
         #time.sleep(1)
-        
-        
+
+
     with open('metadata.txt', 'w', encoding='utf-8') as f:
         for line in output:
             f.write("%s\n" % line)
@@ -679,7 +682,7 @@ elif (mode=="2"):
 
 
 
-        
+
         cast_crew_url = "https://www.imdb.com/title/" + imdbID + "/fullcredits?ref_=tt_cl_sm#cast"
         release_info_url = "https://www.imdb.com/title/" + imdbID + "/releaseinfo?ref_=tt_ov_inf"
         company_credits_url = "https://www.imdb.com/title/" + imdbID + "/companycredits?ref_=tt_dt_co"
@@ -687,7 +690,7 @@ elif (mode=="2"):
         plot_url = "https://www.imdb.com/title/" + imdbID + "/plotsummary?ref_=tt_ov_pl"
 
 
-        
+
         result=session.get(cast_crew_url)
         src = result.content
         soup = BeautifulSoup(src, 'lxml')
@@ -700,7 +703,7 @@ elif (mode=="2"):
             except KeyError:
                 pass
 
-        
+
 
         header_list = soup.find_all("h4", class_="dataHeaderWithBorder")
         try:
@@ -712,7 +715,7 @@ elif (mode=="2"):
                     producers.append(producer[0].text.strip() + " - " + producer[2].text.strip())
         except IndexError:
             pass
-        
+
 
 
 
@@ -727,7 +730,7 @@ elif (mode=="2"):
             release_dates.append(release[0].text.strip() + " - " + release[1].text)
             #print(release[0].text.strip() + " - " + release[1].text)
 
-        
+
 
 
 
@@ -748,7 +751,7 @@ elif (mode=="2"):
                 distributors.append(distributor.text.strip().replace("            "," - "))
 
 
-        
+
 
         result=session.get(ratings_url)
         src = result.content
@@ -761,7 +764,7 @@ elif (mode=="2"):
         except AttributeError:
             pass
 
-        
+
 
 
         result=session.get(plot_url)
@@ -823,13 +826,12 @@ elif (mode=="2"):
         print(oproductioncmpns)
         print(odistributors)
         print(oratings)
-        
+
 
     with open('metadata.txt', 'w', encoding='utf-8') as f:
         for line in output:
             f.write("%s\n" % line)
     print("Done")
-        
 
 
 
@@ -840,7 +842,8 @@ elif (mode=="2"):
 
 
 
-    
+
+
 elif (mode=="3"):
     entity="tvSeason"
     itunes_search()
@@ -849,25 +852,26 @@ elif (mode=="3"):
     for url, img_url in zip(urls, img_urls):
         print("---------------------------------------------------------------------------------------------------")
         print("TV Show URL: " + url)
-        print("Country: " + url.split(".com/")[1][:2].upper()) 
+        print("Country: " + url.split(".com/")[1][:2].upper())
         print("Getting metadata...")
 
-            
+
         #browser = webdriver.Firefox(executable_path = r'C:/Users/carlo/Documents/Programming-Projects/Python Scripts/iTunesMediaExtractor/geckodriver.exe')
         #browser.get(url)
         #html=browser.page_source
         html=None
         while (html == None):
             try:
-                browser = webdriver.Firefox(executable_path = r'C:/Users/carlo/Documents/Programming-Projects/Python Scripts/iTunesMediaExtractor/geckodriver.exe')
+                # browser = webdriver.Firefox(executable_path = r'C:/Users/carlo/Documents/Programming-Projects/Python Scripts/iTunesMediaExtractor/geckodriver.exe')
+                browser = webdriver.Chrome(service = Service(ChromeDriverManager().install()))
                 browser.get(url)
                 html=browser.page_source
             except WebDriverException:
                 browser.close()
                 time.sleep(1)
-            
-            
-        
+
+
+
 
         soup = BeautifulSoup(html, 'lxml')
         stitle = soup.find("h1", class_="product-header__title show-header__title").text
@@ -880,7 +884,7 @@ elif (mode=="3"):
                 rating = soup.find("span", class_="badge").text
             except AttributeError:
                 rating=""
-        
+
         genre = soup.find("a", class_="link link--no-tint").text
         srelease_date = soup.find("time")["datetime"][:10]
         sdescription = soup.find("p", dir="ltr").text.replace("’", "'").replace("“", '"').replace("”", '"').replace("…", "...").replace("  ", " ")
@@ -889,7 +893,7 @@ elif (mode=="3"):
         except AttributeError:
             cpright = ""
         seasonid = soup.find("meta", attrs={"name":"apple:content_id"})["content"]
-        
+
 
 ##    You can't use a keyword argument called name because the Beautiful Soup search methods already define a name argument.
 ##    You also can't use a Python reserved word like for as a keyword argument.
@@ -931,8 +935,8 @@ elif (mode=="3"):
         for episode in episodes:
             episode_id=episode.find("a", class_="link tracks__track__link l-row")["data-episode-id"]
             episode_number=episode.find("li", class_="inline-list__item inline-list__item--margin-inline-start-large tracks__track__eyebrow-item").text.strip()
-            
-            
+
+
             try:
                 episode_title=episode.find("span", class_="we-truncate we-truncate--multi-line ember-view")["aria-label"]
             except KeyError:
@@ -959,14 +963,14 @@ elif (mode=="3"):
             print(oepisode_release_date)
             print(oepisode_description)
             print(oepisode_id)
-            
+
 
         output.append(spacer)
         browser.close()
         print("Metadata extracted")
 
         print("Image URL: " + img_url)
-        print("Downloading image...")    
+        print("Downloading image...")
         r = session.get(img_url)
         filename= stitle +  ".jpg"
 
@@ -974,14 +978,14 @@ elif (mode=="3"):
         for fcharacter in fcharacters:
             if fcharacter in filename:
                 filename = filename.replace(fcharacter,"")
-                                                                          
+
         filename=filename.lower()
         with open(filename, 'wb') as f:
             f.write(r.content)
         print("Download complete")
         print("Image saved in: " + filename)
-        
-        
+
+
     with open('metadata.txt', 'w', encoding='utf-8') as f:
         for line in output:
             f.write("%s\n" % line)
@@ -992,8 +996,8 @@ elif (mode=="3"):
 
 
 
-    
-    
+
+
 
 
 
