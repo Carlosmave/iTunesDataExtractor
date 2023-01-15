@@ -8,6 +8,7 @@ from webdriver_manager.chrome import ChromeDriverManager
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
 from selenium.common.exceptions import WebDriverException
+import markdown
 
 mode=""
 urls=[]
@@ -852,54 +853,91 @@ elif (mode=="3"):
     for url, img_url in zip(urls, img_urls):
         print("---------------------------------------------------------------------------------------------------")
         print("TV Show URL: " + url)
-        print("Country: " + url.split(".com/")[1][:2].upper())
+        country = url.split(".com/")[1][:2].upper()
+        print("Country: " + country)
+        season_id = url.split("id")[1].split("?")[0]
+        print("ID: " + season_id)
         print("Getting metadata...")
 
+        season_url = "https://itunes.apple.com/lookup?id=" + season_id + "&entity=tvEpisode"
+        response = requests.get(season_url)
+        response.raise_for_status()
+        response = response.json()
+        response = response["results"]
+        episodes_list = []
+        season_collection = None
 
-        #browser = webdriver.Firefox(executable_path = r'C:/Users/carlo/Documents/Programming-Projects/Python Scripts/iTunesMediaExtractor/geckodriver.exe')
-        #browser.get(url)
-        #html=browser.page_source
-        html=None
-        while (html == None):
-            try:
-                # browser = webdriver.Firefox(executable_path = r'C:/Users/carlo/Documents/Programming-Projects/Python Scripts/iTunesMediaExtractor/geckodriver.exe')
-                browser = webdriver.Chrome(service = Service(ChromeDriverManager().install()))
-                browser.get(url)
-                html=browser.page_source
-            except WebDriverException:
-                browser.close()
-                time.sleep(1)
+        for track in response:
+            if track["wrapperType"] == "track":
+                episodes_list.append(track)
+            else:
+                season_collection = track
+
+        
+
+
+#         #browser = webdriver.Firefox(executable_path = r'C:/Users/carlo/Documents/Programming-Projects/Python Scripts/iTunesMediaExtractor/geckodriver.exe')
+#         #browser.get(url)
+#         #html=browser.page_source
+#         html=None
+#         while (html == None):
+#             try:
+#                 # browser = webdriver.Firefox(executable_path = r'C:/Users/carlo/Documents/Programming-Projects/Python Scripts/iTunesMediaExtractor/geckodriver.exe')
+#                 browser = webdriver.Chrome(service = Service(ChromeDriverManager().install()))
+#                 browser.get(url)
+#                 html=browser.page_source
+#             except WebDriverException:
+#                 browser.close()
+#                 time.sleep(1)
 
 
 
 
-        soup = BeautifulSoup(html, 'lxml')
-        stitle = soup.find("h1", class_="product-header__title show-header__title").text
+        # soup = BeautifulSoup(html, 'lxml')
+        # print(soup)
+        # time.sleep(3)
+        # stitle = soup.find("h1", class_="product-header__title show-header__title").text
+        stitle = season_collection["collectionName"]
+        # try:
+        #     rating = soup.find("svg")["aria-label"].replace(" ","-")
+        # except TypeError:
+        #     rating = ""
+        # if (rating == ""):
+        #     try:
+        #         rating = soup.find("span", class_="badge").text
+        #     except AttributeError:
+        #         rating=""
         try:
-            rating = soup.find("svg")["aria-label"].replace(" ","-")
-        except TypeError:
+            rating = season_collection["contentAdvisoryRating"]
+        except KeyError:
             rating = ""
-        if (rating == ""):
-            try:
-                rating = soup.find("span", class_="badge").text
-            except AttributeError:
-                rating=""
 
-        genre = soup.find("a", class_="link link--no-tint").text
-        srelease_date = soup.find("time")["datetime"][:10]
-        sdescription = soup.find("p", dir="ltr").text.replace("’", "'").replace("“", '"').replace("”", '"').replace("…", "...").replace("  ", " ")
-        try:
-            cpright = soup.find("div", class_="sosumi product-hero__tracks-sosumi").text.strip()
-        except AttributeError:
-            cpright = ""
-        seasonid = soup.find("meta", attrs={"name":"apple:content_id"})["content"]
+        # genre = soup.find("a", class_="link link--no-tint").text
+        genre = season_collection["primaryGenreName"]
+        # srelease_date = soup.find("time")["datetime"][:10]
+        srelease_date = season_collection["releaseDate"][:10]
+        # sdescription = soup.find("p", dir="ltr").text.replace("’", "'").replace("“", '"').replace("”", '"').replace("…", "...").replace("  ", " ")
+        sdescription = season_collection["longDescription"]
+        sdescription_html = markdown.markdown(sdescription)
+        sdescription_soup = BeautifulSoup(sdescription_html, features='html.parser')
+        sdescription = sdescription_soup.get_text()
+        sdescription = sdescription.replace("’", "'").replace("“", '"').replace("”", '"').replace("…", "...").replace("  ", " ")
+        # try:
+        #     cpright = soup.find("div", class_="sosumi product-hero__tracks-sosumi").text.strip()
+        # except AttributeError:
+        #     cpright = ""
+        cpright = season_collection["copyright"]
+        # seasonid = soup.find("meta", attrs={"name":"apple:content_id"})["content"]
+        seasonid = season_collection["collectionId"]
 
 
-##    You can't use a keyword argument called name because the Beautiful Soup search methods already define a name argument.
-##    You also can't use a Python reserved word like for as a keyword argument.
-##    Beautiful Soup provides a special argument called attrs which you can use in these situations. attrs is a dictionary that acts just like the keyword arguments.
+# ##    You can't use a keyword argument called name because the Beautiful Soup search methods already define a name argument.
+# ##    You also can't use a Python reserved word like for as a keyword argument.
+# ##    Beautiful Soup provides a special argument called attrs which you can use in these situations. attrs is a dictionary that acts just like the keyword arguments.
 
-        episodes = soup.find_all("li", class_="ember-view tracks__track")
+#         episodes = soup.find_all("li", class_="tracks__track")
+
+#         # print("EPISODES:", episodes)
 
         ourl="TV Show URL: " + url
         ocountry="Country: " + url.split(".com/")[1][:2].upper()
@@ -909,7 +947,7 @@ elif (mode=="3"):
         ogenre = "Genre: " + genre
         osdescription = "Season Description: " + sdescription
         ocpright = "Copyright: " + cpright
-        oseasonid = "Season ID: " + seasonid
+        oseasonid = "Season ID: " + str(seasonid)
         spacer="---------------------------------------------------------------------------------------------------"
 
         output.append(ourl)
@@ -932,23 +970,37 @@ elif (mode=="3"):
 
 
 
-        for episode in episodes:
-            episode_id=episode.find("a", class_="link tracks__track__link l-row")["data-episode-id"]
-            episode_number=episode.find("li", class_="inline-list__item inline-list__item--margin-inline-start-large tracks__track__eyebrow-item").text.strip()
+        # for episode in episodes:
+        for episode in episodes_list:
+            # episode_id=episode.find("a", class_="link tracks__track__link l-row")["data-episode-id"]
+            episode_id=episode["trackId"]
+            # episode_number=episode.find("li", class_="inline-list__item inline-list__item--margin-inline-start-large tracks__track__eyebrow-item").text.strip()
+            episode_number=episode["trackNumber"]
 
 
-            try:
-                episode_title=episode.find("span", class_="we-truncate we-truncate--multi-line ember-view")["aria-label"]
-            except KeyError:
-                episode_title=episode.find("div", class_="we-clamp ember-view").text
-            episode_description=episode.find("p", dir="ltr").text.replace("’", "'").replace("“", '"').replace("”", '"').replace("…", "...").replace("  ", " ")
-            episode_release_date=episode.find("time")["datetime"][:10]
+            # try:
+            #     episode_title=episode.find("span", class_="we-truncate we-truncate--multi-line ember-view")["aria-label"]
+            # except KeyError:
+            #     episode_title=episode.find("div", class_="we-clamp ember-view").text
+            
+            episode_title = episode["trackName"]
+
+            # episode_description=episode.find("p", dir="ltr").text.replace("’", "'").replace("“", '"').replace("”", '"').replace("…", "...").replace("  ", " ")
+
+            episode_description = episode["longDescription"]
+            episode_description_html = markdown.markdown(episode_description)
+            episode_description_soup = BeautifulSoup(episode_description_html, features='html.parser')
+            episode_description = episode_description_soup.get_text()
+            episode_description = episode_description.replace("’", "'").replace("“", '"').replace("”", '"').replace("…", "...").replace("  ", " ")
+
+            # episode_release_date=episode.find("time")["datetime"][:10]
+            episode_release_date=episode["releaseDate"][:10]
             spacer2="###################################################################################################"
-            oepisode_number="Episode Number: " + episode_number
+            oepisode_number="Episode Number: " + str(episode_number)
             oepisode_title="Episode Title: " + episode_title
             oepisode_release_date="Episode Release Date: " + episode_release_date
             oepisode_description="Episode Description: " + episode_description
-            oepisode_id="Episode ID: " + episode_id
+            oepisode_id="Episode ID: " + str(episode_id)
 
             output.append(spacer2)
             output.append(oepisode_number)
@@ -966,7 +1018,7 @@ elif (mode=="3"):
 
 
         output.append(spacer)
-        browser.close()
+        # browser.close()
         print("Metadata extracted")
 
         print("Image URL: " + img_url)

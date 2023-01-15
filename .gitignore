@@ -1,0 +1,5 @@
+/venv
+/Nueva carpeta
+*.jpg
+*.log
+metadata.txt
