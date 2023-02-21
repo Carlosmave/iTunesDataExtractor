@@ -145,13 +145,37 @@ def imdb_search(search_term):
 
 
                 plot_url = "https://www.imdb.com/title/" + imdb_id + "/plotsummary?ref_=tt_ov_pl"
-                result=session.get(plot_url)
-                src = result.content
-                soup = BeautifulSoup(src, 'lxml')
-                description_list = soup.find("ul", id="plot-summaries-content")
-                description_list = description_list.find_all("li")
-                short_description = description_list[0].find("p").text.replace("’", "'").replace("“", '"').replace("”", '"').replace("…", "...").replace("  ", " ")
-                short_descriptions.append(short_description)
+                # result=session.get(plot_url)
+                # src = result.content
+                # soup = BeautifulSoup(src, 'lxml')
+                # description_list = soup.find("ul", id="plot-summaries-content")
+                # description_list = description_list.find_all("li")
+                # short_description = description_list[0].find("p").text.replace("’", "'").replace("“", '"').replace("”", '"').replace("…", "...").replace("  ", " ")
+                # short_descriptions.append(short_description)
+
+                
+                html=None
+                while (html == None):
+                    try:
+                        # browser = webdriver.Firefox(executable_path = r'C:/Users/carlo/Documents/Programming-Projects/Python Scripts/iTunesMediaExtractor/geckodriver.exe')
+                        browser = webdriver.Chrome(service = Service(ChromeDriverManager().install()))
+                        browser.get(plot_url)
+                        html=browser.page_source
+                    except WebDriverException:
+                        browser.close()
+                        time.sleep(1)
+
+                soup = BeautifulSoup(html, 'lxml')
+
+                try:
+                    description_list = soup.find("div", attrs={"data-testid":"sub-section-summaries"}).find("ul")
+                    description_list = description_list.find_all("li", attrs={"role":"presentation"})[0]
+                    short_description = description_list.text.replace("’", "'").replace("“", '"').replace("”", '"').replace("…", "...").replace("  ", " ")
+                except Exception as e:
+                    print("Exception:", str(e))
+                    short_description = "No Description Available" 
+                short_descriptions.append(short_description)               
+
             else:
                 try:
                     search_term = input("Enter search term: ")
@@ -657,6 +681,7 @@ elif (mode=="2"):
         print("---------------------------------------------------------------------------------------------------")
         print("Movie URL: " + "https://www.imdb.com/title/" + url.split("&i=")[1].split("&type=")[0] + "/")
         print("Getting metadata...")
+        print("OTHER URL:", url)
         response = session.get(url)
         response.raise_for_status()
         response = response.json()
@@ -720,36 +745,92 @@ elif (mode=="2"):
 
 
 
-        result=session.get(release_info_url)
-        src = result.content
-        soup = BeautifulSoup(src, 'lxml')
-        release_list = soup.find("table", class_="ipl-zebra-list ipl-zebra-list--fixed-first release-dates-table-test-only")
-        release_list = release_list.find_all("tr")
+        html=None
+        while (html == None):
+            try:
+                # browser = webdriver.Firefox(executable_path = r'C:/Users/carlo/Documents/Programming-Projects/Python Scripts/iTunesMediaExtractor/geckodriver.exe')
+                browser = webdriver.Chrome(service = Service(ChromeDriverManager().install()))
+                browser.get(release_info_url)
+                html=browser.page_source
+            except WebDriverException:
+                browser.close()
+                time.sleep(1)
+
+        soup = BeautifulSoup(html, 'lxml')
+        # title = soup.find("h1", class_="product-header__title movie-header__title")
+
+
+        # result=session.get(release_info_url)
+        # src = result.content
+        # soup = BeautifulSoup(src, 'lxml')
+        # print(soup)
+        
+        # release_list = soup.find("table", class_="ipl-zebra-list ipl-zebra-list--fixed-first release-dates-table-test-only")
+        release_list = browser.find_elements("xpath", "//div[@data-testid='sub-section-releases']/ul/li")
+        # release_list = soup.find("ul", class_="ipc-metadata-list ipc-metadata-list--dividers-after sc-6b43c14d-0 bZVCaQ ipc-metadata-list--base")
+        # release_list = release_list.find_all("tr")
+        # release_list = release_list.find_all("li")
+        
         for release in release_list:
             #print(release)
-            release=release.find_all("td")
-            release_dates.append(release[0].text.strip() + " - " + release[1].text)
+            # release=release.find_all("td")
+            # release_dates.append(release[0].text.strip() + " - " + release[1].text)
+            # release_country=release.find_all("a")[0].text.strip()
+            release_country = release.find_element("xpath", "./a").text.strip()
+            print("RELEASE COUNTRY:", release_country)
+            
+            # release_date=release.find_all("div")[0].find_all("label")[0].text.strip()
+            release_date = release.find_elements("xpath", "./div")[0].find_elements("xpath", ".//label")[0].text.strip()
+            print("RELEASE DATA:", release_date)
+            release_dates.append(release_country + " - " + release_date)
+            # time.sleep(100000)
             #print(release[0].text.strip() + " - " + release[1].text)
 
 
 
 
+        # print("COMPANY CREDITS URL:", company_credits_url)
+        # result=session.get(company_credits_url)
+        # src = result.content
+        # soup = BeautifulSoup(src, 'lxml')
 
-        result=session.get(company_credits_url)
-        src = result.content
-        soup = BeautifulSoup(src, 'lxml')
-        production_header = soup.find("h4", id="production")
-        distributors_header = soup.find("h4", id="distributors")
-        if (production_header!=None and distributors_header!=None):
-            company_list=soup.find_all("ul", class_="simpleList")
-            production_list=company_list[0]
-            production_list=production_list.find_all("li")
-            distributor_list=company_list[1]
-            distributor_list=distributor_list.find_all("li")
+        html=None
+        while (html == None):
+            try:
+                # browser = webdriver.Firefox(executable_path = r'C:/Users/carlo/Documents/Programming-Projects/Python Scripts/iTunesMediaExtractor/geckodriver.exe')
+                browser = webdriver.Chrome(service = Service(ChromeDriverManager().install()))
+                browser.get(company_credits_url)
+                html=browser.page_source
+            except WebDriverException:
+                browser.close()
+                time.sleep(1)
+
+        soup = BeautifulSoup(html, 'lxml')
+
+        production_header = soup.find("span", id="production")
+        if production_header != None:
+            production_list = browser.find_elements("xpath", "//div[@data-testid='sub-section-production']/ul/li")
             for production in production_list:
                 productions.append(production.text.strip().replace("            "," - "))
+
+        distributors_header = soup.find("span", id="distribution")
+        if distributors_header != None:
+            distributor_list = browser.find_elements("xpath", "//div[@data-testid='sub-section-distribution']/ul/li")            
             for distributor in distributor_list:
                 distributors.append(distributor.text.strip().replace("            "," - "))
+
+
+        # distributors_header = soup.find("span", id="distribution")
+        # if (production_header!=None and distributors_header!=None):
+        #     company_list=soup.find_all("ul", class_="simpleList")
+        #     production_list=company_list[0]
+        #     production_list=production_list.find_all("li")
+        #     distributor_list=company_list[1]
+        #     distributor_list=distributor_list.find_all("li")
+        #     for production in production_list:
+        #         productions.append(production.text.strip().replace("            "," - "))
+        #     for distributor in distributor_list:
+        #         distributors.append(distributor.text.strip().replace("            "," - "))
 
 
 
@@ -768,13 +849,34 @@ elif (mode=="2"):
 
 
 
-        result=session.get(plot_url)
-        src = result.content
-        soup = BeautifulSoup(src, 'lxml')
-        description_list = soup.find("ul", id="plot-summaries-content")
-        description_list = description_list.find_all("li")
-        description = description_list[0].find("p").text.replace("’", "'").replace("“", '"').replace("”", '"').replace("…", "...").replace("  ", " ")
+        # result=session.get(plot_url)
+        # src = result.content
+        # soup = BeautifulSoup(src, 'lxml')
+        # print("PLOT URL:", plot_url)
 
+        html=None
+        while (html == None):
+            try:
+                # browser = webdriver.Firefox(executable_path = r'C:/Users/carlo/Documents/Programming-Projects/Python Scripts/iTunesMediaExtractor/geckodriver.exe')
+                browser = webdriver.Chrome(service = Service(ChromeDriverManager().install()))
+                browser.get(plot_url)
+                html=browser.page_source
+            except WebDriverException:
+                browser.close()
+                time.sleep(1)
+
+        soup = BeautifulSoup(html, 'lxml')
+
+        # time.sleep(100000)
+        # description_list = soup.find("ul", id="plot-summaries-content")
+        # print("SOUP:", soup)
+        try:
+            description_list = soup.find("div", attrs={"data-testid":"sub-section-summaries"}).find("ul")
+            description_list = description_list.find_all("li", attrs={"role":"presentation"})[0]
+            description = description_list.text.replace("’", "'").replace("“", '"').replace("”", '"').replace("…", "...").replace("  ", " ")
+        except Exception as e:
+            print("Exception:", str(e))
+            description = "No Description Available"
 
         ourl="Movie URL: " + "https://www.imdb.com/title/" + imdbID + "/"
         otitle = "Title: " + title
