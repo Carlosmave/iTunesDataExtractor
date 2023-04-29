@@ -553,6 +553,8 @@ if (mode=="1"):
             # rating = soup.find("li", attrs = {"class": "inline-list__item inline-list__item--margin-inline-end-rating"}).find("svg")["aria-label"].replace(" ","-")
         except TypeError:
             rating = soup.find("span", class_="badge").text
+        except:
+            rating = ""
         genre = soup.find("a", class_="link link--no-tint")
         release_date = soup.find("time")
         description = soup.find("p")
@@ -780,7 +782,8 @@ elif (mode=="2"):
             print("RELEASE COUNTRY:", release_country)
             
             # release_date=release.find_all("div")[0].find_all("label")[0].text.strip()
-            release_date = release.find_elements("xpath", "./div")[0].find_elements("xpath", ".//label")[0].text.strip()
+            # release_date = release.find_elements("xpath", "./div")[0].find_elements("xpath", ".//label")[0].text.strip()
+            release_date = release.find_elements("xpath", "./div")[0].find_elements("xpath", ".//span")[0].text.strip()
             print("RELEASE DATA:", release_date)
             release_dates.append(release_country + " - " + release_date)
             # time.sleep(100000)
