@@ -533,6 +533,12 @@ if (mode=="1"):
         print("Getting metadata...")
 
 ##        browser = webdriver.Firefox(executable_path = r'C:/Users/carlo/Documents/Programming-Projects/Python Scripts/iTunesMediaExtractor/geckodriver.exe')
+        movieid = url.split("/id")[1].split("?")[0]
+        season_url = "https://itunes.apple.com/lookup?id=" + movieid + "&entity=movie"
+        response = requests.get(season_url)
+        response.raise_for_status()
+        response = response.json()
+        response = response["results"][0]
 
         html=None
         while (html == None):
@@ -546,64 +552,74 @@ if (mode=="1"):
                 time.sleep(1)
 
         soup = BeautifulSoup(html, 'lxml')
-        title = soup.find("h1", class_="product-header__title movie-header__title")
+        # title = soup.find("h1", class_="product-header__title movie-header__title")
+        title = response["trackName"]
         time.sleep(3)
-        try:
-            rating = soup.find("svg")["aria-label"].replace(" ","-")
-            # rating = soup.find("li", attrs = {"class": "inline-list__item inline-list__item--margin-inline-end-rating"}).find("svg")["aria-label"].replace(" ","-")
-        except TypeError:
-            rating = soup.find("span", class_="badge").text
-        except:
-            rating = ""
-        genre = soup.find("a", class_="link link--no-tint")
-        release_date = soup.find("time")
-        description = soup.find("p")
-        crew = soup.find_all("dd", class_="cast-list__detail")
-        movieid = soup.find("meta", attrs={"name":"apple:content_id"})
-        cast=[]
-        directors=[]
-        producers=[]
-        screenwriters=[]
+        # try:
+        #     rating = soup.find("svg")["aria-label"].replace(" ","-")
+        #     # rating = soup.find("li", attrs = {"class": "inline-list__item inline-list__item--margin-inline-end-rating"}).find("svg")["aria-label"].replace(" ","-")
+        # except TypeError:
+        #     rating = soup.find("span", class_="badge").text
+        # except:
+        #     rating = ""
+        rating = response["contentAdvisoryRating"]
+        # genre = soup.find("a", class_="link link--no-tint")
+        genre = response["primaryGenreName"]
+        # release_date = soup.find("time")
+        release_date = response["releaseDate"][:10]
+        # description = soup.find("p")
+        description = response["longDescription"]
+        # crew = soup.find_all("dd", class_="cast-list__detail")
+        # movieid = soup.find("meta", attrs={"name":"apple:content_id"})
+        # cast=[]
+        # directors=[]
+        # producers=[]
+        # screenwriters=[]
 
-        for person in crew:
-            data=person.find("a")
-            data=data["data-metrics-click"]
-            data=json.loads(data)
-            data=data["actionDetails"]
-            role=data["type"]
-            if role == "cast":
-                cast.append(person.find("a").text.strip())
-            elif role == "director":
-                directors.append(person.find("a").text.strip())
-            elif role == "producer":
-                producers.append(person.find("a").text.strip())
-            elif role == "screenwriter":
-                screenwriters.append(person.find("a").text.strip())
+        # for person in crew:
+        #     data=person.find("a")
+        #     data=data["data-metrics-click"]
+        #     data=json.loads(data)
+        #     data=data["actionDetails"]
+        #     role=data["type"]
+        #     if role == "cast":
+        #         cast.append(person.find("a").text.strip())
+        #     elif role == "director":
+        #         directors.append(person.find("a").text.strip())
+        #     elif role == "producer":
+        #         producers.append(person.find("a").text.strip())
+        #     elif role == "screenwriter":
+        #         screenwriters.append(person.find("a").text.strip())
 
         try:
-            studio = soup.find("dd", class_="information-list__item__definition").text.strip()
+            # studio = soup.find("dd", class_="information-list__item__definition").text.strip()
+            studio = soup.find_all("section", class_="product-footer__metadata__section")[0].find_all("dd", class_="product-footer__metadata__section__desc typ-caption clr-secondary-text")[0].text.strip()
+            # //section[@class="product-footer__metadata__section"][1]//dd[@class="product-footer__metadata__section__desc typ-caption clr-secondary-text"][1]
         except AttributeError:
             studio = ""
         try:
-            cpright = soup.find("dd", class_="information-list__item__definition information-list__item__definition--copyright").text.strip()
+            # cpright = soup.find("dd", class_="information-list__item__definition information-list__item__definition--copyright").text.strip()
+            cpright = soup.find_all("section", class_="product-footer__metadata__section")[0].find("p", class_="product-footer__metadata__section__desc typ-caption clr-secondary-text").text.strip()
+            # /section[@class="product-footer__metadata__section"][1]//p[@class="product-footer__metadata__section__desc typ-caption clr-secondary-text"]
         except AttributeError:
             cpright = ""
 
         ourl="Movie URL: " + url
         ocountry="Country: " + url.split(".com/")[1][:2].upper()
-        otitle="Title: " + title.text
-        ordate="Release Date: " + release_date["datetime"][:10]
+        otitle="Title: " + title
+        ordate="Release Date: " + release_date
         orating="Rating: " + rating
-        ogenre="Genre: " + genre.text
+        ogenre="Genre: " + genre
         osdescr="Short Description: " + short_description.replace("’", "'").replace("“", '"').replace("”", '"').replace("…", "...").replace("  ", " ")
-        odescr="Long Description: " + description.text.replace("’", "'").replace("“", '"').replace("”", '"').replace("…", "...").replace("  ", " ")
-        ocast="Cast: " + ', '.join(cast)
-        odirec="Directors: " + ', '.join(directors)
-        oprod="Producers: " + ', '.join(producers)
-        oscreen="Screenwriters: " + ', '.join(screenwriters)
+        odescr="Long Description: " + description.replace("’", "'").replace("“", '"').replace("”", '"').replace("…", "...").replace("  ", " ")
+        # ocast="Cast: " + ', '.join(cast)
+        # odirec="Directors: " + ', '.join(directors)
+        # oprod="Producers: " + ', '.join(producers)
+        # oscreen="Screenwriters: " + ', '.join(screenwriters)
         ostudio="Studio: " + studio
         ocpright="Copyright: " + cpright
-        omovieid="Movie ID: " + movieid["content"]
+        # omovieid="Movie ID: " + movieid["content"]
+        omovieid="Movie ID: " + movieid
         spacer="---------------------------------------------------------------------------------------------------"
 
         output.append(ourl)
@@ -614,10 +630,10 @@ if (mode=="1"):
         output.append(ogenre)
         output.append(osdescr)
         output.append(odescr)
-        output.append(odirec)
-        output.append(oprod)
-        output.append(ocast)
-        output.append(oscreen)
+        # output.append(odirec)
+        # output.append(oprod)
+        # output.append(ocast)
+        # output.append(oscreen)
         output.append(ostudio)
         output.append(ocpright)
         output.append(omovieid)
@@ -630,10 +646,10 @@ if (mode=="1"):
         print(ogenre)
         print(osdescr)
         print(odescr)
-        print(odirec)
-        print(oprod)
-        print(ocast)
-        print(oscreen)
+        # print(odirec)
+        # print(oprod)
+        # print(ocast)
+        # print(oscreen)
         print(ostudio)
         print(ocpright)
         print(omovieid)
@@ -653,7 +669,7 @@ if (mode=="1"):
 
 
 
-        filename= title.text +  ".jpg"
+        filename= title +  ".jpg"
 
         fcharacters=[':', '*', '?', '"', '<', '>', '|', ' ', "'", "/"]#, '/', '\'
         for fcharacter in fcharacters:
