@@ -171,6 +171,4 @@ countries = {
     "zw": "Zimbabwe"
 }
 
-
-
 api_key = "e6fa56aa"

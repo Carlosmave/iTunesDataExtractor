@@ -112,27 +112,6 @@ def get_imdb_choice(search_term):
     imdb_choice = choose(imdb_search_results)
     return imdb_choice
 
-def get_imdb_plot_summary(imdb_id):
-    plot_url = f'https://www.imdb.com/title/{imdb_id}/plotsummary?ref_=tt_ov_pl'                
-    html = None
-    while (html == None):
-        try:
-            browser = webdriver.Chrome(service = Service(ChromeDriverManager().install()))
-            browser.get(plot_url)
-            html = browser.page_source
-        except WebDriverException:
-            browser.close()
-            time.sleep(1)
-    soup = BeautifulSoup(html, 'lxml')
-    try:
-        description_list = soup.find("div", attrs={"data-testid":"sub-section-summaries"}).find("ul")
-        description_list = description_list.find_all("li", attrs={"role":"presentation"})[0]
-        short_description = description_list.text.replace("’", "'").replace("“", '"').replace("”", '"').replace("…", "...").replace("  ", " ")
-    except Exception as e:
-        print("Exception:", str(e))
-        short_description = "No Description Available"
-    return short_description 
-
 def imdb_search(search_term):
     if (search_term != "sourceimdb"):
         print("---------------------------------------------------------------------------------------------------")
@@ -146,8 +125,12 @@ def imdb_search(search_term):
             if (imdb_choice != None):
                 print(f'Item chosen: {imdb_choice["Title"]} - {imdb_choice["Year"]}')
                 imdb_id = imdb_choice["imdbID"]
-                short_description = get_imdb_plot_summary(imdb_id)
-                short_descriptions.append(short_description)               
+                imdb_url = f'http://www.omdbapi.com/?apikey={api_key}&i={imdb_id}&type=movie'
+                response = session.get(imdb_url)
+                response.raise_for_status()
+                response = response.json()
+                short_description = response["Plot"].replace("’", "'").replace("“", '"').replace("”", '"').replace("…", "...").replace("  ", " ")            
+                short_descriptions.append(short_description)   
             else:
                 try:
                     search_term = input("Enter search term: ")
@@ -343,7 +326,7 @@ def get_imdb_movie_information():
         date = response["Released"]
         main_rating = response["Rated"]
         genre = response["Genre"]
-        #description = response["Plot"]
+        description = response["Plot"].replace("’", "'").replace("“", '"').replace("”", '"').replace("…", "...").replace("  ", " ")
         directors = response["Director"]
         screenwriters = response["Writer"]
         production_company = response["Production"]
@@ -437,13 +420,6 @@ def get_imdb_movie_information():
                 browser.close()
                 time.sleep(1)
         soup = BeautifulSoup(html, 'lxml')
-        try:
-            description_list = soup.find("div", attrs={"data-testid":"sub-section-summaries"}).find("ul")
-            description_list = description_list.find_all("li", attrs={"role":"presentation"})[0]
-            description = description_list.text.replace("’", "'").replace("“", '"').replace("”", '"').replace("…", "...").replace("  ", " ")
-        except Exception as e:
-            print("Exception:", str(e))
-            description = "No Description Available"
         ourl = f'Movie URL: https://www.imdb.com/title/{imdbID}/'
         otitle = f'Title: {title}'
         oyear = f'Year: {year}'
