@@ -1,4 +1,3 @@
-from functions import media_mode, itunes_search, get_movie_information, imdb_search, get_imdb_movie_information, get_tv_show_information
 from process import Process
 
 def main():

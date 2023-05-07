@@ -1,14 +1,11 @@
-from config import countries, session, urls, img_urls, imdb_ids, api_key, output, chrome_options
+from config import countries, session, api_key, chrome_options
 import sys, time
-import requests
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.common.exceptions import WebDriverException
 from bs4 import BeautifulSoup
 import markdown
-
-
 
 class Process:
     def __init__(self):
@@ -17,18 +14,17 @@ class Process:
         self.img_urls = []
         self.imdb_ids = []
         self.output = []
+        self.session = session
 
     def get_html_page_content(self, url: str):
         html = None
         while (html == None):
             try:
-                # browser = webdriver.Chrome(service = Service(ChromeDriverManager().install()), options = chrome_options)
                 self.browser.get(url)
                 html = self.browser.page_source
             except WebDriverException:
                 self.browser.close()
                 time.sleep(1)
-                # browser = generate_browser()
                 self.browser = webdriver.Chrome(service = Service(ChromeDriverManager().install()), options = chrome_options)
         soup = BeautifulSoup(html, 'lxml')
         return soup
@@ -123,7 +119,7 @@ class Process:
         imdb_search_results = []
         while(i < 5):
             imdb_url = f'http://www.omdbapi.com/?apikey={api_key}&s={search_term}&type=movie&page={str(i)}'
-            response = session.get(imdb_url)
+            response = self.session.get(imdb_url)
             response.raise_for_status()
             response = response.json()
             try:
@@ -142,7 +138,7 @@ class Process:
             print("---------------------------------------------------------------------------------------------------")
             print("Search results on IMDb for: " + search_term)
             imdb_url = f'http://www.omdbapi.com/?apikey={api_key}&s={search_term}&type=movie'
-            response = session.get(imdb_url)
+            response = self.session.get(imdb_url)
             response.raise_for_status()
             response = response.json()
             if response["Response"] == "True":
@@ -150,7 +146,7 @@ class Process:
                 if (imdb_choice != None):
                     print(f'Item chosen: {imdb_choice["Title"]} - {imdb_choice["Year"]}')
                     imdb_id = imdb_choice["imdbID"]
-                    imdb_ids.append(imdb_id)
+                    self.imdb_ids.append(imdb_id)
                 else:
                     try:
                         search_term = input("Enter search term: ")
@@ -173,7 +169,7 @@ class Process:
                 print("---------------------------------------------------------------------------------------------------")
                 print("Search results on IMDb for: " + search_term)
                 imdb_url = f'http://www.omdbapi.com/?apikey={api_key}&s={search_term}&type=movie'
-                response = session.get(imdb_url)
+                response = self.session.get(imdb_url)
                 response.raise_for_status()
                 response = response.json()
                 if response["Response"] == "True":
@@ -182,7 +178,7 @@ class Process:
                         print(f'Item chosen: {imdb_choice["Title"]} - {imdb_choice["Year"]}')
                         imdb_id = imdb_choice["imdbID"]
                         imdb_url = f'http://www.omdbapi.com/?apikey={api_key}&i={imdb_id}&type=movie'
-                        urls.append(imdb_url)
+                        self.urls.append(imdb_url)
                 else:
                     print("No results match the search term entered")
                 self.imdb_search("sourceimdb")
@@ -190,7 +186,7 @@ class Process:
                 print("Enter a valid search term")
                 self.imdb_search("sourceimdb")
             else:
-                print(str(len(urls)) + " search terms added")
+                print(str(len(self.urls)) + " search terms added")
 
 
     def itunes_search(self, mode: str, entity: str):
@@ -202,7 +198,7 @@ class Process:
         if (search_term != "0" and search_term != ""):
             country = self.choose_country()
             movie_url = f'https://itunes.apple.com/search?term={search_term}&country={country}&entity={entity}'
-            response = session.get(movie_url)
+            response = self.session.get(movie_url)
             response.raise_for_status()
             response = response.json()
             print("---------------------------------------------------------------------------------------------------")
@@ -222,9 +218,9 @@ class Process:
                 if (choice != None):
                     print(f'Item chosen: {choice[item_key]} - {choice["releaseDate"][:4]}')
                     url = choice[f'{item_key.replace("Name", "View")}Url']
-                    urls.append(url)
+                    self.urls.append(url)
                     imgurl = (choice["artworkUrl100"]).replace("100x100bb", "100000x100000-999")
-                    img_urls.append(imgurl)
+                    self.img_urls.append(imgurl)
                 if (mode == "1"):
                     self.imdb_search(choice["trackName"])
             else:
@@ -234,12 +230,12 @@ class Process:
             print("Enter a valid search term")
             self.itunes_search(mode, entity)
         else:
-            print(str(len(urls)) + " search terms added")
+            print(str(len(self.urls)) + " search terms added")
 
     def save_cover(self, title, img_url):
         print(f'Image URL: {img_url}')
         print("Downloading image...")
-        r = session.get(img_url)
+        r = self.session.get(img_url)
         filename = title +  ".jpg"
         fcharacters = [':', '*', '?', '"', '<', '>', '|', ' ', "'", "/"]
         for fcharacter in fcharacters:
@@ -251,21 +247,21 @@ class Process:
         print("Download complete")
         print("Image saved in: " + filename)
 
-    def save_data(self, output):
+    def save_data(self):
         with open('metadata.txt', 'w', encoding='utf-8') as f:
-            for line in output:
+            for line in self.output:
                 f.write("%s\n" % line)
         print("Done")
 
     def get_movie_information(self):
-        for url, img_url, imdb_id in zip(urls, img_urls, imdb_ids):
+        for url, img_url, imdb_id in zip(self.urls, self.img_urls, self.imdb_ids):
             print("---------------------------------------------------------------------------------------------------")
             print("Movie URL: " + url)
             print("Country: " + url.split(".com/")[1][:2].upper())
             print("Getting metadata...")
             movieid = url.split("/id")[1].split("?")[0]
             season_url = "https://itunes.apple.com/lookup?id=" + movieid + "&entity=movie"
-            response = requests.get(season_url)
+            response = self.session.get(season_url)
             response.raise_for_status()
             response = response.json()
             response = response["results"][0]
@@ -284,7 +280,7 @@ class Process:
             except AttributeError:
                 cpright = ""
             imdb_url = f'http://www.omdbapi.com/?apikey={api_key}&i={imdb_id}&type=movie'
-            response = session.get(imdb_url)
+            response = self.session.get(imdb_url)
             response.raise_for_status()
             response = response.json()
             short_description = response["Plot"].replace("’", "'").replace("“", '"').replace("”", '"').replace("…", "...").replace("  ", " ")
@@ -328,22 +324,22 @@ class Process:
             ocast = "Cast: " + ', '.join(cast)
             oscreenwriters = f'Screenwriters: {screenwriters}'
             spacer="---------------------------------------------------------------------------------------------------"
-            output.append(ourl)
-            output.append(ocountry)
-            output.append(otitle)
-            output.append(ordate)
-            output.append(orating)
-            output.append(ogenre)
-            output.append(osdescr)
-            output.append(odescr)
-            output.append(ostudio)
-            output.append(ocpright)
-            output.append(omovieid)
-            output.append(odirectors)
-            output.append(oproducers)
-            output.append(ocast)
-            output.append(oscreenwriters)
-            output.append(spacer)
+            self.output.append(ourl)
+            self.output.append(ocountry)
+            self.output.append(otitle)
+            self.output.append(ordate)
+            self.output.append(orating)
+            self.output.append(ogenre)
+            self.output.append(osdescr)
+            self.output.append(odescr)
+            self.output.append(ostudio)
+            self.output.append(ocpright)
+            self.output.append(omovieid)
+            self.output.append(odirectors)
+            self.output.append(oproducers)
+            self.output.append(ocast)
+            self.output.append(oscreenwriters)
+            self.output.append(spacer)
             print(otitle)
             print(ordate)
             print(orating)
@@ -361,16 +357,16 @@ class Process:
             print("Metadata extracted")
             self.save_cover(title, img_url)
         self.browser.close()
-        self.save_data(output)
+        self.save_data()
 
 
     def get_imdb_movie_information(self):
-        for url in urls:
+        for url in self.urls:
             print("---------------------------------------------------------------------------------------------------")
             print(f'Movie URL: https://www.imdb.com/title/{url.split("&i=")[1].split("&type=")[0]}/')
             print("Getting metadata...")
             print("OTHER URL:", url)
-            response = session.get(url)
+            response = self.session.get(url)
             response.raise_for_status()
             response = response.json()
             title = response["Title"]
@@ -456,23 +452,23 @@ class Process:
             odistributors = "Distributors: \n" + '\n'.join(distributors)
             oratings = "Ratings: \n" + '\n'.join(ratings)
             spacer="---------------------------------------------------------------------------------------------------"
-            output.append(ourl)
-            output.append(otitle)
-            output.append(oyear)
-            output.append(odate)
-            output.append(omainrating)
-            output.append(ogenre)
-            output.append(odescription)
-            output.append(odirectors)
-            output.append(oproducers)
-            output.append(ocast)
-            output.append(oscreenwriters)
-            output.append(oproductioncmpn)
-            output.append(oreleasedates)
-            output.append(oproductioncmpns)
-            output.append(odistributors)
-            output.append(oratings)
-            output.append(spacer)
+            self.output.append(ourl)
+            self.output.append(otitle)
+            self.output.append(oyear)
+            self.output.append(odate)
+            self.output.append(omainrating)
+            self.output.append(ogenre)
+            self.output.append(odescription)
+            self.output.append(odirectors)
+            self.output.append(oproducers)
+            self.output.append(ocast)
+            self.output.append(oscreenwriters)
+            self.output.append(oproductioncmpn)
+            self.output.append(oreleasedates)
+            self.output.append(oproductioncmpns)
+            self.output.append(odistributors)
+            self.output.append(oratings)
+            self.output.append(spacer)
             print(otitle)
             print(oyear)
             print(odate)
@@ -489,11 +485,11 @@ class Process:
             print(odistributors)
             print(oratings)
         self.browser.close()
-        self.save_data(output)
+        self.save_data()
 
 
     def get_tv_show_information(self):
-        for url, img_url in zip(urls, img_urls):
+        for url, img_url in zip(self.urls, self.img_urls):
             print("---------------------------------------------------------------------------------------------------")
             print("TV Show URL: " + url)
             country = url.split(".com/")[1][:2].upper()
@@ -502,7 +498,7 @@ class Process:
             print(f'ID: {season_id}')
             print("Getting metadata...")
             season_url = f'https://itunes.apple.com/lookup?id={season_id}&entity=tvEpisode'
-            response = requests.get(season_url)
+            response = self.session.get(season_url)
             response.raise_for_status()
             response = response.json()
             response = response["results"]
@@ -537,15 +533,15 @@ class Process:
             ocpright = f'Copyright: {cpright}'
             oseasonid = f'Season ID: {str(seasonid)}'
             spacer = "---------------------------------------------------------------------------------------------------"
-            output.append(ourl)
-            output.append(ocountry)
-            output.append(ostitle)
-            output.append(osrelease_date)
-            output.append(orating)
-            output.append(ogenre)
-            output.append(osdescription)
-            output.append(ocpright)
-            output.append(oseasonid)
+            self.output.append(ourl)
+            self.output.append(ocountry)
+            self.output.append(ostitle)
+            self.output.append(osrelease_date)
+            self.output.append(orating)
+            self.output.append(ogenre)
+            self.output.append(osdescription)
+            self.output.append(ocpright)
+            self.output.append(oseasonid)
             print(ostitle)
             print(osrelease_date)
             print(orating)
@@ -569,20 +565,20 @@ class Process:
                 oepisode_release_date = f'Episode Release Date: {episode_release_date}'
                 oepisode_description = f'Episode Description: {episode_description}'
                 oepisode_id = f'Episode ID: {str(episode_id)}'
-                output.append(spacer2)
-                output.append(oepisode_number)
-                output.append(oepisode_title)
-                output.append(oepisode_release_date)
-                output.append(oepisode_description)
-                output.append(oepisode_id)
+                self.output.append(spacer2)
+                self.output.append(oepisode_number)
+                self.output.append(oepisode_title)
+                self.output.append(oepisode_release_date)
+                self.output.append(oepisode_description)
+                self.output.append(oepisode_id)
                 print(spacer2)
                 print(oepisode_number)
                 print(oepisode_title)
                 print(oepisode_release_date)
                 print(oepisode_description)
                 print(oepisode_id)
-            output.append(spacer)
+            self.output.append(spacer)
             print("Metadata extracted")
             self.save_cover(stitle, img_url)
         self.browser.close()
-        self.save_data(output)
+        self.save_data()
