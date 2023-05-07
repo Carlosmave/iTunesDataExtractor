@@ -1,6 +1,12 @@
 import requests
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
+from selenium.webdriver.chrome.options import Options
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
+from selenium.common.exceptions import WebDriverException
+from bs4 import BeautifulSoup
 
 session = requests.Session()
 retry = Retry(connect=5, backoff_factor=0.5)
@@ -8,9 +14,25 @@ adapter = HTTPAdapter(max_retries=retry)
 session.mount('http://', adapter)
 session.mount('https://', adapter)
 
+
+user_agent = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.50 Safari/537.36'
+chrome_options = Options()
+chrome_options.add_argument(f'user-agent={user_agent}')
+chrome_options.add_argument('--no-sandbox')
+chrome_options.add_argument('--window-size=1920,1080')
+chrome_options.add_argument('--headless')
+chrome_options.add_argument('--disable-gpu')
+chrome_options.add_argument('--allow-running-insecure-content')
+chrome_options.add_argument("--headless")
+chrome_options.add_experimental_option('excludeSwitches', ['enable-logging'])
+# browser = webdriver.Chrome(service = Service(ChromeDriverManager().install()), options = chrome_options)
+
+# def generate_browser():
+#     return webdriver.Chrome(service = Service(ChromeDriverManager().install()), options = chrome_options)
+
 urls = []
 img_urls = []
-short_descriptions = []
+imdb_ids = []
 output = []
 
 countries = {

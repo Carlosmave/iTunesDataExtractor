@@ -1,4 +1,4 @@
-from config import countries, session, urls, img_urls, api_key, short_descriptions, output
+from config import countries, session, urls, img_urls, imdb_ids, api_key, output, chrome_options
 import sys, time
 import requests
 from selenium import webdriver
@@ -7,6 +7,20 @@ from webdriver_manager.chrome import ChromeDriverManager
 from selenium.common.exceptions import WebDriverException
 from bs4 import BeautifulSoup
 import markdown
+
+def get_html_page_content(url: str):
+    html = None
+    while (html == None):
+        try:
+            browser = webdriver.Chrome(service = Service(ChromeDriverManager().install()), options = chrome_options)
+            browser.get(url)
+            html = browser.page_source
+        except WebDriverException:
+            browser.close()
+            time.sleep(1)
+            # browser = generate_browser()
+    soup = BeautifulSoup(html, 'lxml')
+    return soup
 
 def movie_mode():
     print("---------------------------------------------------------------------------------------------------")
@@ -125,12 +139,7 @@ def imdb_search(search_term):
             if (imdb_choice != None):
                 print(f'Item chosen: {imdb_choice["Title"]} - {imdb_choice["Year"]}')
                 imdb_id = imdb_choice["imdbID"]
-                imdb_url = f'http://www.omdbapi.com/?apikey={api_key}&i={imdb_id}&type=movie'
-                response = session.get(imdb_url)
-                response.raise_for_status()
-                response = response.json()
-                short_description = response["Plot"].replace("’", "'").replace("“", '"').replace("”", '"').replace("…", "...").replace("  ", " ")            
-                short_descriptions.append(short_description)   
+                imdb_ids.append(imdb_id)
             else:
                 try:
                     search_term = input("Enter search term: ")
@@ -237,8 +246,10 @@ def save_data(output):
             f.write("%s\n" % line)
     print("Done")
 
+
+
 def get_movie_information():
-    for url, img_url, short_description in zip(urls, img_urls, short_descriptions):
+    for url, img_url, imdb_id in zip(urls, img_urls, imdb_ids):
         print("---------------------------------------------------------------------------------------------------")
         print("Movie URL: " + url)
         print("Country: " + url.split(".com/")[1][:2].upper())
@@ -249,22 +260,12 @@ def get_movie_information():
         response.raise_for_status()
         response = response.json()
         response = response["results"][0]
-        html = None
-        while (html == None):
-            try:
-                browser = webdriver.Chrome(service = Service(ChromeDriverManager().install()))
-                browser.get(url)
-                html = browser.page_source
-            except WebDriverException:
-                browser.close()
-                time.sleep(1)
-        soup = BeautifulSoup(html, 'lxml')
         title = response["trackName"]
-        time.sleep(3)
         rating = response["contentAdvisoryRating"]
         genre = response["primaryGenreName"]
         release_date = response["releaseDate"][:10]
         description = response["longDescription"]
+        soup = get_html_page_content(url)
         try:
             studio = soup.find_all("section", class_="product-footer__metadata__section")[0].find_all("dd", class_="product-footer__metadata__section__desc typ-caption clr-secondary-text")[0].text.strip()
         except AttributeError:
@@ -273,6 +274,35 @@ def get_movie_information():
             cpright = soup.find_all("section", class_="product-footer__metadata__section")[0].find("p", class_="product-footer__metadata__section__desc typ-caption clr-secondary-text").text.strip()
         except AttributeError:
             cpright = ""
+        imdb_url = f'http://www.omdbapi.com/?apikey={api_key}&i={imdb_id}&type=movie'
+        response = session.get(imdb_url)
+        response.raise_for_status()
+        response = response.json()
+        short_description = response["Plot"].replace("’", "'").replace("“", '"').replace("”", '"').replace("…", "...").replace("  ", " ")
+        directors = response["Director"]
+        screenwriters = response["Writer"]
+        cast = []
+        producers = []
+        cast_crew_url = f'https://www.imdb.com/title/{imdb_id}/fullcredits?ref_=tt_cl_sm#cast'
+        soup = get_html_page_content(cast_crew_url)
+        cast_list = soup.find("table", class_="cast_list")
+        cast_list = cast_list.find_all("tr")
+        for actor in cast_list:
+            try:
+                if (actor["class"][0] == "odd" or actor["class"][0] == "even"):
+                    cast.append(actor.find_all("td")[1].text.strip())
+            except KeyError:
+                pass
+        header_list = soup.find_all("h4", class_="dataHeaderWithBorder")
+        try:
+            if ("Produced by" in header_list[3].text):
+                producers_list = soup.find_all("table", class_="simpleTable simpleCreditsTable")
+                producers_list = producers_list[2].find_all("tr")
+                for producer in producers_list:
+                    producer = producer.find_all("td")
+                    producers.append(f'{producer[0].text.strip()} - {producer[2].text.strip()}')
+        except IndexError:
+            pass
         ourl = f'Movie URL: {url}'
         ocountry = f'Country: {url.split(".com/")[1][:2].upper()})'
         otitle = f'Title: {title}'
@@ -284,6 +314,10 @@ def get_movie_information():
         ostudio = f'Studio: {studio}'
         ocpright = f'Copyright: {cpright}'
         omovieid = f'Movie ID: {movieid}'
+        odirectors = f'Directors: {directors}'
+        oproducers = "Producers: "+ ', '.join(producers)
+        ocast = "Cast: " + ', '.join(cast)
+        oscreenwriters = f'Screenwriters: {screenwriters}'
         spacer="---------------------------------------------------------------------------------------------------"
         output.append(ourl)
         output.append(ocountry)
@@ -296,6 +330,10 @@ def get_movie_information():
         output.append(ostudio)
         output.append(ocpright)
         output.append(omovieid)
+        output.append(odirectors)
+        output.append(oproducers)
+        output.append(ocast)
+        output.append(oscreenwriters)
         output.append(spacer)
         print(otitle)
         print(ordate)
@@ -306,7 +344,11 @@ def get_movie_information():
         print(ostudio)
         print(ocpright)
         print(omovieid)
-        browser.close()
+        print(odirectors)
+        print(oproducers)
+        print(ocast)
+        print(oscreenwriters)
+        # browser.close()
         print("Metadata extracted")
         save_cover(title, img_url)
     save_data(output)
@@ -342,9 +384,7 @@ def get_imdb_movie_information():
         company_credits_url = f'https://www.imdb.com/title/{imdbID}/companycredits?ref_=tt_dt_co'
         ratings_url = f'https://www.imdb.com/title/{imdbID}/parentalguide?ref_=tt_stry_pg#certification'
         plot_url = f'https://www.imdb.com/title/{imdbID}/plotsummary?ref_=tt_ov_pl'
-        result = session.get(cast_crew_url)
-        src = result.content
-        soup = BeautifulSoup(src, 'lxml')
+        soup = get_html_page_content(cast_crew_url)
         cast_list = soup.find("table", class_="cast_list")
         cast_list = cast_list.find_all("tr")
         for actor in cast_list:
@@ -363,16 +403,7 @@ def get_imdb_movie_information():
                     producers.append(f'{producer[0].text.strip()} - {producer[2].text.strip()}')
         except IndexError:
             pass
-        html = None
-        while (html == None):
-            try:
-                browser = webdriver.Chrome(service = Service(ChromeDriverManager().install()))
-                browser.get(release_info_url)
-                html = browser.page_source
-            except WebDriverException:
-                browser.close()
-                time.sleep(1)
-        soup = BeautifulSoup(html, 'lxml')
+        soup = get_html_page_content(release_info_url)
         release_list = browser.find_elements("xpath", "//div[@data-testid='sub-section-releases']/ul/li")
         for release in release_list:
             release_country = release.find_element("xpath", "./a").text.strip()
@@ -380,16 +411,7 @@ def get_imdb_movie_information():
             release_date = release.find_elements("xpath", "./div")[0].find_elements("xpath", ".//span")[0].text.strip()
             print("RELEASE DATA:", release_date)
             release_dates.append(f'{release_country} - {release_date}')
-        html = None
-        while (html == None):
-            try:
-                browser = webdriver.Chrome(service = Service(ChromeDriverManager().install()))
-                browser.get(company_credits_url)
-                html = browser.page_source
-            except WebDriverException:
-                browser.close()
-                time.sleep(1)
-        soup = BeautifulSoup(html, 'lxml')
+        soup = get_html_page_content(company_credits_url)
         production_header = soup.find("span", id="production")
         if production_header != None:
             production_list = browser.find_elements("xpath", "//div[@data-testid='sub-section-production']/ul/li")
@@ -400,9 +422,7 @@ def get_imdb_movie_information():
             distributor_list = browser.find_elements("xpath", "//div[@data-testid='sub-section-distribution']/ul/li")            
             for distributor in distributor_list:
                 distributors.append(distributor.text.strip().replace("            "," - "))
-        result = session.get(ratings_url)
-        src = result.content
-        soup = BeautifulSoup(src, 'lxml')
+        soup = get_html_page_content(ratings_url)
         ratings_list = soup.find("tr", id = "certifications-list")
         try:
             ratings_list = ratings_list.find_all("li")
@@ -410,16 +430,7 @@ def get_imdb_movie_information():
                 ratings.append(rating.find("a").text)
         except AttributeError:
             pass
-        html = None
-        while (html == None):
-            try:
-                browser = webdriver.Chrome(service = Service(ChromeDriverManager().install()))
-                browser.get(plot_url)
-                html = browser.page_source
-            except WebDriverException:
-                browser.close()
-                time.sleep(1)
-        soup = BeautifulSoup(html, 'lxml')
+        soup = get_html_page_content(plot_url)
         ourl = f'Movie URL: https://www.imdb.com/title/{imdbID}/'
         otitle = f'Title: {title}'
         oyear = f'Year: {year}'
